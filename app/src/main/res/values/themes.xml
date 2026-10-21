@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.DoubleBassHero" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/night</item>
+        <item name="android:statusBarColor">@color/night</item>
+        <item name="android:navigationBarColor">@color/night</item>
+    </style>
+    <color name="night">#FF0F141C</color>
+    <color name="speed">#FF4C9BFF</color>
+</resources>

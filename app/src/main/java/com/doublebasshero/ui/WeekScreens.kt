@@ -78,7 +78,7 @@ fun ReviewScreen(vm: AppViewModel) {
                         is ReviewReason.Shaky -> "Shaky on ${WD_FULL[rs.date.dayOfWeek.value - 1].take(3)}" to C.endurance
                         is ReviewReason.HeldBack -> "+0 chosen on ${WD_FULL[rs.date.dayOfWeek.value - 1].take(3)}" to C.endurance
                         is ReviewReason.AllClean -> "All clean (${rs.sessions}/${rs.sessions})" to C.hybrid
-                        is ReviewReason.AllCleanFeelingGood -> "All clean, +4 in ${rs.plusFours}/${rs.sessions}" to C.hybrid
+                        is ReviewReason.AllCleanStrong -> "All clean, +4 in ${rs.plusFours}/${rs.sessions}" to C.hybrid
                     }
                     Box(Modifier.fillMaxWidth().height(1.dp).background(C.line))
                     Row(verticalAlignment = Alignment.CenterVertically) {

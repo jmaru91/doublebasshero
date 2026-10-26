@@ -113,8 +113,6 @@ class SessionService : LifecycleService() {
             ACTION_CLEAN -> session.rate(FormRating.CLEAN)
             ACTION_SHAKY -> session.rate(FormRating.SHAKY)
             ACTION_BROKEN -> session.rate(FormRating.BROKEN)
-            ACTION_PLUS0 -> session.chooseNext(0)
-            ACTION_PLUS4 -> session.chooseNext(4)
         }
         return START_NOT_STICKY
     }
@@ -177,8 +175,6 @@ class SessionService : LifecycleService() {
                 } else if (step.nextSetOf != null) {
                     b.setContentTitle("Next set: ${SessionRunner.nextBpm(r)} BPM")
                     b.setContentText("$restName · $resting")
-                    b.addAction(0, "+0", action(ACTION_PLUS0))
-                    b.addAction(0, "+4", action(ACTION_PLUS4))
                     b.addAction(0, "Ready", action(ACTION_READY))
                 } else {
                     b.setContentTitle("$restName · next: ${nextTitle(r)}")
@@ -229,7 +225,5 @@ class SessionService : LifecycleService() {
         const val ACTION_CLEAN = "dbh.CLEAN"
         const val ACTION_SHAKY = "dbh.SHAKY"
         const val ACTION_BROKEN = "dbh.BROKEN"
-        const val ACTION_PLUS0 = "dbh.PLUS0"
-        const val ACTION_PLUS4 = "dbh.PLUS4"
     }
 }

@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.sp
 import com.doublebasshero.engine.BarKind
 import com.doublebasshero.engine.DayType
 import com.doublebasshero.engine.FormRating
-import com.doublebasshero.engine.Ramp
 import com.doublebasshero.engine.RestKind
 import com.doublebasshero.engine.SessionRunner
 import com.doublebasshero.engine.Step
@@ -315,19 +314,23 @@ private fun RestView(vm: AppViewModel, s: LiveSession, step: Step.Rest) {
     if (step.nextSetOf != null) {
         val cur = r.bpm.getValue(step.nextSetOf!!)
         val next = SessionRunner.nextBpm(r) ?: cur
-        val sel = Ramp.CHOICES.firstOrNull { (cur + it).coerceAtMost(r.plan.cap) == next }
+        val rating = set?.rating
         Card {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text("Next set", color = C.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Hud("$next BPM", 26.sp, r.plan.dayType.color())
             }
-            ChoiceRow(
-                Ramp.CHOICES.map { Triple("+$it", C.speed, it == sel) },
-                { c.chooseNext(Ramp.CHOICES[it]) },
-                height = 50.dp,
-                sub = listOf("form slipped", "default", "feeling good"),
+            Body(
+                when {
+                    next >= r.plan.cap && next > cur -> "+${next - cur} · level cap reached (${r.plan.cap})."
+                    next >= r.plan.cap -> "Level cap reached (${r.plan.cap})."
+                    rating == null -> "Clean → +2 (+4 after two clean sets in a row) · Shaky or Broken → same BPM."
+                    rating == FormRating.CLEAN && next - cur == 4 -> "+4 · two clean sets in a row."
+                    rating == FormRating.CLEAN -> "+2 · clean set."
+                    else -> "Same BPM · ${rating.title.lowercase()} set."
+                },
+                color = C.muted, size = 13.sp,
             )
-            if (next >= r.plan.cap) Body("Level cap reached (${r.plan.cap}).", color = C.endurance, size = 12.sp)
         }
     }
     Body("Go when you're ready · resting ${mmss(s.elapsedMs / 1000)}", color = C.muted, size = 13.sp, align = TextAlign.Center)

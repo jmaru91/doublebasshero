@@ -75,27 +75,39 @@ class SessionTest {
         repeat(4) { assertIs<Step.Warmup>(s.step); s = SessionRunner.advance(s) }
         assertEquals(108, SessionRunner.bpm(s))
         s = SessionRunner.advance(s) // set 1 done
+        assertEquals(110, SessionRunner.nextBpm(s), "an unrated set counts as clean")
         s = SessionRunner.rate(s, FormRating.CLEAN)
         assertEquals(110, SessionRunner.nextBpm(s))
-        s = SessionRunner.chooseNext(s, 4)
         s = SessionRunner.advance(s) // rest done
-        assertEquals(112, SessionRunner.bpm(s))
+        assertEquals(110, SessionRunner.bpm(s))
         s = SessionRunner.advance(s) // set 2 done
         s = SessionRunner.rate(s, FormRating.SHAKY)
-        assertEquals(112, SessionRunner.nextBpm(s), "shaky preselects +0")
+        assertEquals(110, SessionRunner.nextBpm(s), "shaky holds the BPM")
         s = SessionRunner.advance(s)
         val sets = s.sets.getValue(Exercise.FLOOR_HIP)
-        assertEquals(listOf(108, 112), sets.map { it.bpm })
-        assertEquals(listOf(4, 0), sets.map { it.rampDelta })
+        assertEquals(listOf(108, 110), sets.map { it.bpm })
+        assertEquals(listOf(2, 0), sets.map { it.rampDelta })
         assertEquals(listOf(FormRating.CLEAN, FormRating.SHAKY), sets.map { it.rating })
+    }
+
+    @Test fun `two clean sets in a row earn +4`() {
+        var s = SessionRunner.start(plan(DayType.HYBRID))
+        repeat(5) { s = SessionRunner.advance(s) } // warm-up, set 1
+        s = SessionRunner.rate(s, FormRating.CLEAN)
+        assertEquals(110, SessionRunner.nextBpm(s), "first clean set: +2")
+        repeat(2) { s = SessionRunner.advance(s) } // set 2
+        s = SessionRunner.rate(s, FormRating.CLEAN)
+        assertEquals(114, SessionRunner.nextBpm(s), "second clean in a row: +4")
+        s = SessionRunner.rate(s, FormRating.SHAKY)
+        assertEquals(110, SessionRunner.nextBpm(s), "changing the rating changes the step")
     }
 
     @Test fun `ramp never goes above the cap`() {
         val p = SessionBuilder.build(l4, DayType.ENDURANCE, DayType.ENDURANCE, 119, mapOf(StartKey(Exercise.FLOOR_HIP, DayType.ENDURANCE) to 118), emptyMap(), false, false)
         var s = SessionRunner.start(p)
         repeat(5) { s = SessionRunner.advance(s) }
-        s = SessionRunner.chooseNext(s, 4)
-        assertEquals(119, SessionRunner.nextBpm(s))
+        s = SessionRunner.rate(s, FormRating.CLEAN)
+        assertEquals(119, SessionRunner.nextBpm(s), "118 + 2 is capped at 119")
     }
 
     @Test fun `snapshot survives serialization and resumes with a re-warm-up`() {

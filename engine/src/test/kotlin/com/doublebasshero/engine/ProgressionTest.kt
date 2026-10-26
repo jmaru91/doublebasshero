@@ -32,16 +32,16 @@ class ProgressionTest {
                 else clean(108, 110, 112)
             },
             session(2, DayType.ENDURANCE) { clean(108, 112, 116, delta = 4) },
-            session(4, DayType.ENDURANCE) { ex -> if (ex == Exercise.FLOOR_HEEL_UP) listOf(SetResult(108, CLEAN, 0), SetResult(108, CLEAN, 2), SetResult(110, CLEAN)) else clean(108, 112, 116, delta = 4) },
+            session(4, DayType.ENDURANCE) { ex -> if (ex == Exercise.FLOOR_HEEL_UP) listOf(SetResult(108, SHAKY, 0), SetResult(108, CLEAN, 2), SetResult(110, CLEAN)) else clean(108, 112, 116, delta = 4) },
             session(5, DayType.ENDURANCE) { ex -> if (ex == Exercise.PEDAL_NORMAL) listOf(SetResult(108, CLEAN, 2), SetResult(110, SHAKY, 0), SetResult(110, SHAKY)) else clean(108, 110, 112) },
         )
         val recs = WeeklyReview.recommend(l4, 112, emptyMap(), week).associateBy { it.exercise to it.dayType }
         assertEquals(2, recs.getValue(Exercise.FLOOR_HIP to DayType.SPEED).delta)
         assertEquals(-2, recs.getValue(Exercise.FLOOR_HIP to DayType.HYBRID).delta)
         assertIs<ReviewReason.Broken>(recs.getValue(Exercise.FLOOR_HIP to DayType.HYBRID).reason)
-        assertEquals(0, recs.getValue(Exercise.FLOOR_HEEL_UP to DayType.ENDURANCE).delta, "+0 choice holds back")
+        assertEquals(0, recs.getValue(Exercise.FLOOR_HEEL_UP to DayType.ENDURANCE).delta, "a shaky set before the last holds back")
         assertEquals(0, recs.getValue(Exercise.PEDAL_NORMAL to DayType.ENDURANCE).delta, "shaky holds back")
-        assertEquals(4, recs.getValue(Exercise.FLOOR_HIP to DayType.ENDURANCE).delta, "+4 in 2 of 3 sessions")
+        assertEquals(4, recs.getValue(Exercise.FLOOR_HIP to DayType.ENDURANCE).delta, "+4 ramp steps in 2 of 3 sessions")
     }
 
     @Test fun `no session keeps the BPM and applying respects the cap`() {

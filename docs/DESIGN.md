@@ -158,10 +158,14 @@ At placement (and after every level-up or retest) each exercise and day type sta
 
 - Set 1 is played at the **start BPM** for that exercise and day type.
 - After **each set** the user rates its form (Clean / Shaky / Broken) on the rest screen.
-- The rating preselects the next set's BPM: Clean → **+2**, Shaky or Broken → **+0**. The user can override with **+0 / +2 / +4** (+4 if they feel good).
+- The rating alone sets the next set's BPM; the user doesn't choose the step:
+  - Shaky or Broken → **+0**;
+  - Clean → **+2**;
+  - Clean **and** the previous set of the same exercise was Clean too → **+4** (you're strong enough to push).
+  - An unrated set counts as Clean for +2, never for +4.
 - No set ever goes above the **cap**.
 
-The ramp regulates itself on high levels: with 8–10 sets, a fixed +2 would add 16–18 BPM, but the user stops climbing with +0 as soon as form wobbles.
+The ramp regulates itself on high levels. At levels 8–10 there are 8–10 sets of the same exercise, so a fixed step would push the last sets far above the start (+2 per set = +14 to +18 BPM). Here the climb stops as soon as a set is rated Shaky or Broken, and the level's cap stops it in any case.
 
 ### 3.8 Weekly progression
 
@@ -169,7 +173,7 @@ The app **recommends** next week's start BPMs from what happened in each session
 
 What each session records, per exercise:
 - the form rating of every set (Clean / Shaky / Broken);
-- the ramp choices between sets (+4 = felt good, +0 = form slipped).
+- the BPM of every set (the ramp follows the ratings).
 
 **Exercise rating for a session** = the average of its set ratings (Clean = 2, Shaky = 1, Broken = 0):
 
@@ -186,9 +190,9 @@ At the end of the week, for each exercise and day type, the app looks at all of 
 | This week | Recommendation |
 |---|---|
 | Any session rated ❌ Broken | −2 |
-| Any ⚠️ Shaky, or any +0 ramp choice | +0 |
+| Any ⚠️ Shaky session, or any Shaky/Broken set before the last one | +0 |
 | All ✅ Clean | +2 |
-| All ✅ Clean **and** +4 chosen in most sessions | +4 |
+| All ✅ Clean **and** the ramp gave a +4 in most sessions | +4 |
 
 The result is capped at the level's maximum BPM. The user sees the recommendations in a **week review** and can accept them or adjust any of them: form decides, and the user is the judge of form.
 
@@ -292,7 +296,7 @@ The core of the app is a pure module with no Android dependencies. Given the use
 User state ──►  WeekPlanner      ──► the week (from the user's rest days)
                 SessionBuilder   ──► exercises, sets, start BPMs, pattern
                 WeaknessBalancer ──► redistributes sets
-                RampController   ──► next-set BPM (+0 / +2 / +4, capped)
+                RampController   ──► next-set BPM from the ratings (+0 / +2 / +4 after two clean sets, capped)
                 BpmProgression   ──► week review: recommended start BPMs from the week's sessions
                 CapEvaluator     ──► converts maxed Speed/Hybrid days to Endurance
                 LevelEvaluator   ──► benchmark passed? level up?
@@ -311,7 +315,7 @@ session(date):
       for each set:
           play(bpm, dayType.pattern, level.setDuration)
           rest(dayType == Speed or lastSetOfExercise ? LONG : SHORT)
-          bpm = min(cap, bpm + userChoice(+0 | +2 | +4))   # default +2
+          bpm = min(cap, bpm + step(rating, previousRating))   # +0 / +2 / +4
       rateForm(exercise)
 ```
 
@@ -417,7 +421,7 @@ Tapping any day of the week previews its session. Only today's session can be st
 - The metronome keeps counting quarters through the rest bars.
 - **Rest screen:** "Short rest" or "Long rest", the time spent resting, and a **Ready** button.
   - After every set: rate the set's form (**Clean / Shaky / Broken**).
-  - Between sets of the same exercise: the next set's BPM (**+0 / +2 / +4**), preselected from the rating.
+  - Between sets of the same exercise: the next set's BPM, set by the rating (shown, not chosen).
 - **Leaving a session never loses work silently.** The close button (and Android's back gesture) pauses the session and asks:
   - **Keep going** (default);
   - **End and save N sets**: saved as a **partial** session; its rated sets count toward the week review, and the calendar shows it as "Partial";
@@ -522,7 +526,7 @@ The whole session must work with the screen off and the phone on the floor or a 
   |---|---|---|
   | Playing a set | Exercise · Set 2/3 · 114 BPM · 1:24 left | Pause, Skip |
   | Rest, set not rated | Short rest · rate set 2 (114 BPM) | Clean, Shaky, Broken |
-  | Rest, set rated | Next set: 116 BPM | +0, +4, Ready |
+  | Rest, set rated | Next set: 116 BPM | Ready |
   | Session done | Rate your last set | Clean, Shaky, Broken → Summary |
 
 - **Headphone / Bluetooth button:** one press = Pause or Ready, two presses = Skip.

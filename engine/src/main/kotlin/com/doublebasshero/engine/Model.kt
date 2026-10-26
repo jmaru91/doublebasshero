@@ -158,8 +158,11 @@ object Benchmark {
     const val DURATION_SEC = 240
 }
 
-/** BPM steps between sets of the same exercise. */
+/** BPM steps between sets of the same exercise, set by the ratings. */
 object Ramp {
+    /** After a Clean (or unrated) set. */
     const val DEFAULT_STEP = 2
-    val CHOICES = listOf(0, 2, 4)
+
+    /** After two Clean sets in a row: strong enough to push. */
+    const val STRONG_STEP = 4
 }

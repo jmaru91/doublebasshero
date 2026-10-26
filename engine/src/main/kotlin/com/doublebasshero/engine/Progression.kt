@@ -71,7 +71,7 @@ sealed interface ReviewReason {
     data class Shaky(val date: LocalDate) : ReviewReason
     data class HeldBack(val date: LocalDate) : ReviewReason
     data class AllClean(val sessions: Int) : ReviewReason
-    data class AllCleanFeelingGood(val plusFours: Int, val sessions: Int) : ReviewReason
+    data class AllCleanStrong(val plusFours: Int, val sessions: Int) : ReviewReason
 }
 
 data class Recommendation(
@@ -87,8 +87,8 @@ data class Recommendation(
 object WeeklyReview {
     /**
      * Recommends next week's start BPMs from one week of sessions:
-     * any Broken → −2; any Shaky or a +0 ramp choice → 0;
-     * all Clean with +4 in most sessions → +4; all Clean → +2.
+     * any Broken → −2; any Shaky, or a Shaky/Broken set before the last → 0;
+     * all Clean with a +4 ramp step in most sessions → +4; all Clean → +2.
      */
     fun recommend(level: Level, trueBpm: Int, startBpms: Map<StartKey, Int>, week: List<SessionResult>): List<Recommendation> =
         DayType.PROGRESSING.flatMap { type ->
@@ -101,13 +101,14 @@ object WeeklyReview {
                 if (results.isEmpty()) return@map Recommendation(ex, type, from, 0, ReviewReason.NoSession)
                 val broken = results.firstOrNull { it.second.rating == FormRating.BROKEN }
                 val shaky = results.firstOrNull { it.second.rating == FormRating.SHAKY }
-                val heldBack = results.firstOrNull { (_, r) -> r.sets.dropLast(1).any { it.rampDelta == 0 } }
-                val plusFours = results.count { (_, r) -> r.sets.any { it.rampDelta == 4 } }
+                // A non-clean set before the last one stopped the ramp: hold the start BPM.
+                val heldBack = results.firstOrNull { (_, r) -> r.sets.dropLast(1).any { it.rating != null && it.rating != FormRating.CLEAN } }
+                val plusFours = results.count { (_, r) -> r.sets.any { it.rampDelta == Ramp.STRONG_STEP } }
                 when {
                     broken != null -> Recommendation(ex, type, from, -2, ReviewReason.Broken(broken.first.date))
                     shaky != null -> Recommendation(ex, type, from, 0, ReviewReason.Shaky(shaky.first.date))
                     heldBack != null -> Recommendation(ex, type, from, 0, ReviewReason.HeldBack(heldBack.first.date))
-                    plusFours * 2 > results.size -> Recommendation(ex, type, from, 4, ReviewReason.AllCleanFeelingGood(plusFours, results.size))
+                    plusFours * 2 > results.size -> Recommendation(ex, type, from, 4, ReviewReason.AllCleanStrong(plusFours, results.size))
                     else -> Recommendation(ex, type, from, 2, ReviewReason.AllClean(results.size))
                 }
             }

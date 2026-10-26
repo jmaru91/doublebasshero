@@ -242,12 +242,6 @@ class SessionController(
         persist()
     }
 
-    fun chooseNext(delta: Int) {
-        val s = _state.value ?: return
-        _state.value = s.copy(runner = SessionRunner.chooseNext(s.runner, delta))
-        persist()
-    }
-
     fun setMuted(muted: Boolean) {
         metronome.muted = muted
         _state.value = _state.value?.copy(tick = (_state.value?.tick ?: 0) + 1)

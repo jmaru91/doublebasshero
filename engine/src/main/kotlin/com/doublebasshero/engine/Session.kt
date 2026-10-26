@@ -206,7 +206,7 @@ object SessionRunner {
         return state.copy(index = state.index + 1, sets = sets, bpm = bpm, nextBpm = next)
     }
 
-    /** Rates the set just played; on a between-sets rest it also preselects the next BPM. */
+    /** Rates the set just played; on a between-sets rest the rating sets the next BPM. */
     fun rate(state: RunnerState, rating: FormRating): RunnerState {
         val step = state.step as? Step.Rest ?: return state
         val ex = step.ratedExercise
@@ -216,16 +216,18 @@ object SessionRunner {
         return state.copy(sets = sets, nextBpm = next)
     }
 
-    /** Clean → +2; Shaky or Broken → +0. Capped. */
+    /**
+     * Shaky or Broken → +0; Clean (or not rated) → +2; Clean after a Clean set of
+     * the same exercise → +4. Capped. The user doesn't choose.
+     */
     fun defaultNext(state: RunnerState, ex: Exercise, rating: FormRating?): Int {
-        val step = if (rating == null || rating == FormRating.CLEAN) Ramp.DEFAULT_STEP else 0
+        val previous = state.sets[ex].orEmpty().dropLast(1).lastOrNull()?.rating
+        val step = when {
+            rating == FormRating.CLEAN && previous == FormRating.CLEAN -> Ramp.STRONG_STEP
+            rating == null || rating == FormRating.CLEAN -> Ramp.DEFAULT_STEP
+            else -> 0
+        }
         return (state.bpm.getValue(ex) + step).coerceAtMost(state.plan.cap)
-    }
-
-    /** User override on the rest screen: +0, +2 or +4. */
-    fun chooseNext(state: RunnerState, delta: Int): RunnerState {
-        val ex = (state.step as? Step.Rest)?.nextSetOf ?: return state
-        return state.copy(nextBpm = state.nextBpm + (ex to (state.bpm.getValue(ex) + delta).coerceAtMost(state.plan.cap)))
     }
 
     fun nextBpm(state: RunnerState): Int? {

@@ -120,27 +120,38 @@ Rest Mon + Fri   →   R  S  H  E  R  E  E
 1. **Warm-up (~2 min):**
    - Sticking RLRLRRRR LRLRLLLL, in **8th notes** (2 bars)
    - Sticking RLRLRRRR RRRRRRRR LRLRLLLL LLLLLLLL, in **8th notes** (4 bars)
-   - Solo Leg exercises 1 and 2, right foot only, in **8th notes**
-   - Solo Leg exercises 1 and 2, left foot only, in **8th notes**
+   - Solo Leg, right foot only, in **8th notes**
+   - Solo Leg, left foot only, in **8th notes**
+
+   **Solo Leg 1 and Solo Leg 2 alternate** from one training session to the next (by the number of sessions already done), so each day plays one of them: **16 bars on the right foot and 24 on the left** (Solo Leg 1: 4 / 6 passes; Solo Leg 2: 8 / 12 passes). Both days last the same.
 
    The whole warm-up is in 8th notes: as written in 16ths it is too fast for a warm-up. Each written bar of 16ths becomes two bars of 8ths.
 
    The other exercises in the PDF (Interval, Burst, Endurance) are dropped: the day types replace them.
 
-   Every warm-up exercise is shown as a **step grid**: one cell per note (16 per bar for 16ths, 8 per bar for 8ths), grouped by beat, each cell marked **R** or **L** for the foot, or empty for a rest. A cursor follows the metronome. Grids (transcribed from the PDF, ❓ to verify):
+   **How it's played:**
+   - **Whole passes, never cut mid-pattern:** each Sticking repeats its pattern at least twice and for at least 8 bars (Sticking 1: 4 passes; Sticking 2: 2 passes); the day's Solo Leg plays 16 bars right, 24 left.
+   - **8th notes on quarter clicks:** the patterns are written and played in 8ths; the metronome plays quarters (accent on beat 1), so two notes per click. The highlighted note moves two steps per click.
+   - **Tempo (metronome, quarters):** Sticking 1 at 65% of the True BPM, Sticking 2 at 75%, Solo Leg at 85% for **both feet** (never below 40). At True BPM 117: 76 · 87 · 99 · 99.
+   - **Count-in:** one bar (4 clicks) before every exercise.
+   - **Count-in:** one bar of count-in before every exercise, so you switch pattern cleanly.
+   - **Weaker foot** (Settings: None / Left / Right): its Solo Leg gets one extra pass.
+   - Total, count-ins included: about 2:35 at True BPM 117, ~3:40–5 min at levels 1–3, ~1:40 at level 8 (180), ~1:20 at 220, the same on Solo Leg 1 and 2 days.
+
+   Each exercise is shown as **drum notation** on a 5-line staff: kick in the first space with stems down, 8th notes beamed in pairs (one pair per beat), 8th rests where the foot is silent, **R** or **L** under each note; on Solo Leg also hi-hat (x above the staff) and snare (third space) with stems up; and the note being played highlighted, following the metronome. Two bars per row. Patterns (transcribed from the PDF, checked by the user):
 
    ```
    Sticking 1 (8ths) RL RL RR RR | LR LR LL LL
    Sticking 2 (8ths) RL RL RR RR | RR RR RR RR | LR LR LL LL | LL LL LL LL
    Solo Leg 1 (R)    RR R. RR R. | RR R. RR R. | RR RR R. .. | RR RR R. ..
-   Solo Leg 2 (R)    RR R. RR RR | .. RR RR R.
+   Solo Leg 2 (R)    RR R. RR RR | .R R. RR R.
    ```
 
-   The left-foot version is the same with L.
+   The left-foot version is the same with L. Solo Leg also shows the hands as written in the PDF (hi-hat in 8ths, snare on 2 and 4), stretched to the 8th-note version: hi-hat on every beat, snare on beat 3 of each bar.
 2. **Exercises** in the level's order, Pedal Normal last, each played with the day type's pattern. Every day type, Endurance included, uses the level table's sets with a ramp (no single long set).
 3. **Rests** are a hint, not a timer: the app says "short rest" or "long rest", counts up the time, and the user taps **Ready** to go on. Nothing starts on its own.
 
-Rest lengths are derived from the reference session durations. All six durations match exactly with:
+Rest lengths are derived from the reference session durations. All six durations match exactly with (the course's 2:20 warm-up is now measured in passes instead, about the same length):
 
 | Block | Hint |
 |---|---|
@@ -575,6 +586,6 @@ No backend: the app works fully offline.
 
 ## 9. Open questions
 
-1. **Solo Leg grids** (§3.6): are the transcriptions from the PDF correct?
+None right now.
 
-Settled: 3 Endurance days; app-recommended week (no templates); app-recommended weekly progression (§3.8); one cap per level; day conversion only when **all** exercises hit the cap (Speed and Hybrid); ramp per set, preselected from the set's rating; rests as hints, always long on Speed days; warm-up includes Solo Leg; Endurance days use the normal ramp; form rated after every set and averaged per exercise; benchmark locked until every exercise hits the cap on Endurance days, suggested on the next fresh day; 3+1 cycle managed by the app, deload = half the sets with no ramp (full rest optional); a week with fewer than 3 sessions counts as an unplanned deload; skipped days count as rest and the app suggests make-up days; busy-week priority S H E E E → S H E E → S H E → H E → E; notifications per §6.8 (per-weekday reminder times, missed-session at 21:00, end-of-rest cue on); full session usable with the screen off (§6.9); interrupted sessions resume within the day, with a re-warm-up after 15 min (§6.3b).
+Settled: 3 Endurance days; app-recommended week (no templates); app-recommended weekly progression (§3.8); one cap per level; day conversion only when **all** exercises hit the cap (Speed and Hybrid); ramp per set set by the ratings (+0 / +2 / +4 after two clean sets); rests as hints, always long on Speed days; warm-up includes Solo Leg; Endurance days use the normal ramp; form rated after every set and averaged per exercise; benchmark locked until every exercise hits the cap on Endurance days, suggested on the next fresh day; 3+1 cycle managed by the app, deload = half the sets with no ramp (full rest optional); a week with fewer than 3 sessions counts as an unplanned deload; skipped days count as rest and the app suggests make-up days; busy-week priority S H E E E → S H E E → S H E → H E → E; notifications per §6.8 (per-weekday reminder times, missed-session at 21:00, end-of-rest cue on); full session usable with the screen off (§6.9); interrupted sessions resume within the day, with a re-warm-up after 15 min (§6.3b).

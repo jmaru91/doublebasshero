@@ -58,6 +58,7 @@ fun ProfileEntity.toProfile() = Profile(
     prioritizeWeak = prioritizeWeak,
     noPedals = noPedals,
     noPedalsUntil = noPedalsUntil.takeIf { it >= 0 }?.let { day(it) },
+    weakFoot = com.doublebasshero.engine.Foot.entries.firstOrNull { it.name == weakFoot },
 )
 
 fun ProfileEntity.notificationPrefs() = NotificationPrefs(

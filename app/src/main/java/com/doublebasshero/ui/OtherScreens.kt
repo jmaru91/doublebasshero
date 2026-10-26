@@ -393,6 +393,14 @@ fun SettingsScreen(vm: AppViewModel) {
         Label("Training")
         Card(padding = 12.dp) {
             ToggleRow("Prioritize weak spots", "More sets for your worst exercise, taken from your best", p.prioritizeWeak) { on -> vm.updateSettings { it.copy(prioritizeWeak = on) } }
+            Column(Modifier.padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Weaker foot", color = C.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text("Gets one extra Solo Leg pass in the warm-up", color = C.muted, fontSize = 12.sp)
+                val options = listOf("NONE" to "None", "LEFT" to "Left", "RIGHT" to "Right")
+                ChoiceRow(options.map { (k, label) -> Triple(label, C.speed, p.weakFoot == k) }, { i ->
+                    vm.updateSettings { it.copy(weakFoot = options[i].first) }
+                }, height = 42.dp)
+            }
             ToggleRow(
                 "No-pedals mode",
                 "Floor exercises only, for when you're away from your pedals (e.g. on holiday). Same session length.",

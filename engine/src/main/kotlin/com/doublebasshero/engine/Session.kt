@@ -19,7 +19,18 @@ data class SessionPlan(
     val benchmarkBpm: Int? = null,
     /** Floor exercises only (no-pedals mode). */
     val noPedals: Boolean = false,
+    /** Drives the warm-up tempo ramp (0 in snapshots from older versions). */
+    val trueBpm: Int = 0,
+    /** Gets an extra Solo Leg pass in the warm-up. */
+    val weakFoot: Foot? = null,
+    /** Which Solo Leg the warm-up plays today (1 or 2; 0 = both, older sessions). */
+    val soloLeg: Int = 0,
 ) {
+    val warmup: List<WarmupExercise> get() = Warmup.exercises(soloLeg)
+
+    /** Warm-up tempo for exercise [index]; older snapshots fall back to their single tempo. */
+    fun warmupBpm(index: Int): Int = if (trueBpm > 0) Warmup.bpm(trueBpm, index) else warmupBpm
+
     val cap: Int get() = Levels.byNumber(level).cap
     val setDurationSec: Int get() = Levels.byNumber(level).setDurationSec
     val isBenchmark: Boolean get() = dayType == DayType.BENCHMARK
@@ -40,6 +51,8 @@ object SessionBuilder {
         prioritizeWeak: Boolean,
         deload: Boolean,
         noPedals: Boolean = false,
+        weakFoot: Foot? = null,
+        soloLeg: Int = 1,
     ): SessionPlan {
         require(dayType in DayType.PROGRESSING)
         val base = if (noPedals) NoPedals.baseSets(level) else level.exercises.associateWith { level.setsPerExercise }
@@ -49,9 +62,12 @@ object SessionBuilder {
             dayType = dayType,
             slot = slot,
             deload = deload,
-            warmupBpm = Warmup.bpm(trueBpm),
+            warmupBpm = Warmup.bpm(trueBpm, 0),
             withWarmup = true,
             noPedals = noPedals,
+            trueBpm = trueBpm,
+            weakFoot = weakFoot,
+            soloLeg = soloLeg,
             exercises = base.keys.map { ex ->
                 val n = sets.getValue(ex)
                 PlannedExercise(
@@ -65,15 +81,26 @@ object SessionBuilder {
     }
 
     /** Warm-up (unless it's the placement test), then 4:00 at [bpm]. */
-    fun benchmark(level: Level, bpm: Int, trueBpm: Int, placement: Boolean, slot: DayType = DayType.SPEED) = SessionPlan(
+    fun benchmark(
+        level: Level,
+        bpm: Int,
+        trueBpm: Int,
+        placement: Boolean,
+        slot: DayType = DayType.SPEED,
+        weakFoot: Foot? = null,
+        soloLeg: Int = 1,
+    ) = SessionPlan(
         level = level.number,
         dayType = DayType.BENCHMARK,
         slot = slot,
         deload = false,
-        warmupBpm = Warmup.bpm(trueBpm),
+        warmupBpm = Warmup.bpm(trueBpm, 0),
         withWarmup = !placement,
         exercises = emptyList(),
         benchmarkBpm = bpm,
+        trueBpm = trueBpm,
+        weakFoot = weakFoot,
+        soloLeg = soloLeg,
     )
 
     /** Estimated length with the rest hints, in seconds. */
@@ -122,7 +149,7 @@ data class RunnerState(
 object SessionRunner {
     fun steps(plan: SessionPlan): List<Step> {
         val out = mutableListOf<Step>()
-        if (plan.withWarmup) Warmup.exercises.indices.forEach { out += Step.Warmup(it) }
+        if (plan.withWarmup) plan.warmup.indices.forEach { out += Step.Warmup(it) }
         if (plan.isBenchmark) {
             out += Step.BenchmarkTest(plan.benchmarkBpm!!)
             return out
@@ -154,9 +181,15 @@ object SessionRunner {
         sets = emptyMap(),
     )
 
+    /** Exact length of a timed step in ms (warm-up: whole passes of the pattern). */
+    fun stepMillis(plan: SessionPlan, step: Step): Long = when (step) {
+        is Step.Warmup -> Warmup.millis(plan.warmup[step.index], plan.warmupBpm(step.index), plan.weakFoot)
+        else -> hintSeconds(plan, step) * 1000L
+    }
+
     /** Seconds a timed step lasts, or the rest hint for a rest step. */
     fun hintSeconds(plan: SessionPlan, step: Step): Int = when (step) {
-        is Step.Warmup -> Warmup.secondsPerExercise
+        is Step.Warmup -> ((stepMillis(plan, step) + 999) / 1000).toInt()
         is Step.Work -> plan.setDurationSec
         is Step.BenchmarkTest -> Benchmark.DURATION_SEC
         is Step.Rest -> when (step.kind) {
@@ -171,14 +204,14 @@ object SessionRunner {
 
     /** BPM the metronome plays during [step]. */
     fun bpm(state: RunnerState, step: Step? = state.step): Int = when (step) {
-        is Step.Warmup -> state.plan.warmupBpm
+        is Step.Warmup -> state.plan.warmupBpm(step.index)
         is Step.Work -> state.bpm.getValue(step.exercise)
         is Step.BenchmarkTest -> step.bpm
         else -> 0
     }
 
     fun pattern(state: RunnerState, step: Step? = state.step): List<BarKind> = when (step) {
-        is Step.Warmup -> Warmup.exercises[step.index].bars.map { BarKind.EIGHTHS }
+        is Step.Warmup -> state.plan.warmup[step.index].bars.map { BarKind.EIGHTHS }
         is Step.Work -> Patterns.forDay(state.plan.dayType)
         is Step.BenchmarkTest -> Patterns.forDay(DayType.BENCHMARK)
         else -> emptyList()
@@ -254,7 +287,7 @@ object SessionRunner {
         }
         if (!rewarm) return state
         val at = (state.index until state.steps.size).firstOrNull { state.steps[it] !is Step.Rest } ?: return state
-        val warm = Warmup.exercises.indices.map { Step.Warmup(it, rewarm = true) }
+        val warm = state.plan.warmup.indices.map { Step.Warmup(it, rewarm = true) }
         return state.copy(steps = state.steps.take(at) + warm + state.steps.drop(at))
     }
 

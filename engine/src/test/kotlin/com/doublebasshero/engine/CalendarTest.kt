@@ -33,6 +33,9 @@ class CalendarTest {
         assertEquals(DayState.DONE, week[0].state)
         assertTrue(c.day(today).canStart)
         assertEquals(3, c.day(today).cycleWeek)
+        assertEquals(1, c.buildSession(today, emptyMap())!!.soloLeg, "2 sessions before today → Solo Leg 1")
+        assertEquals(1, cal(sessions = emptyList()).buildSession(today, emptyMap())!!.soloLeg)
+        assertEquals(2, cal(sessions = thisWeek.take(1)).buildSession(today, emptyMap())!!.soloLeg)
     }
 
     @Test fun `past training days without a session are skipped`() {

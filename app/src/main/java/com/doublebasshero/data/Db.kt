@@ -45,6 +45,8 @@ data class ProfileEntity(
     @ColumnInfo(defaultValue = "0") val noPedals: Boolean = false,
     /** Return date (epoch day) from which the mode is off by itself, or -1. */
     @ColumnInfo(defaultValue = "-1") val noPedalsUntil: Long = -1,
+    /** RIGHT, LEFT or NONE: the weaker foot gets an extra Solo Leg pass in the warm-up. */
+    @ColumnInfo(defaultValue = "NONE") val weakFoot: String = "NONE",
 )
 
 @Entity(tableName = "start_bpm", primaryKeys = ["exercise", "dayType"])
@@ -157,7 +159,7 @@ interface TrainingDao {
 
 @Database(
     entities = [ProfileEntity::class, StartBpmEntity::class, SessionEntity::class, WeekOverrideEntity::class, LevelEventEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class DbhDatabase : RoomDatabase() {
@@ -172,7 +174,14 @@ abstract class DbhDatabase : RoomDatabase() {
             }
         }
 
+        /** v3: weaker foot for the warm-up. */
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE profile ADD COLUMN weakFoot TEXT NOT NULL DEFAULT 'NONE'")
+            }
+        }
+
         fun create(context: Context): DbhDatabase =
-            Room.databaseBuilder(context, DbhDatabase::class.java, "dbh.db").addMigrations(MIGRATION_1_2).build()
+            Room.databaseBuilder(context, DbhDatabase::class.java, "dbh.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
     }
 }

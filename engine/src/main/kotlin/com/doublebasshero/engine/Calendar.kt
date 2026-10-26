@@ -23,6 +23,8 @@ data class Profile(
     val noPedals: Boolean = false,
     /** Back with pedals from this day on (the mode switches itself off); null = until turned off. */
     val noPedalsUntil: LocalDate? = null,
+    /** The weaker foot gets an extra Solo Leg pass in the warm-up. */
+    val weakFoot: Foot? = null,
 ) {
     val level: Level get() = Levels.forTrueBpm(trueBpm)
 
@@ -149,11 +151,17 @@ class TrainingCalendar(
 
     fun buildSession(date: LocalDate, startBpms: Map<StartKey, Int>): SessionPlan? {
         val info = day(date)
+        // Solo Leg 1 and 2 alternate from one training session to the next.
+        val soloLeg = Warmup.soloLegFor(history.count { it.date < date })
         return when {
-            info.type == DayType.BENCHMARK -> SessionBuilder.benchmark(level, level.benchmarkBpm, profile.trueBpm, placement = false, slot = info.slot)
+            info.type == DayType.BENCHMARK -> SessionBuilder.benchmark(
+                level, level.benchmarkBpm, profile.trueBpm, placement = false, slot = info.slot, weakFoot = profile.weakFoot, soloLeg = soloLeg,
+            )
             info.type in DayType.PROGRESSING -> SessionBuilder.build(
                 level, info.type, info.slot, profile.trueBpm, startBpms, recentRatings(), profile.prioritizeWeak, info.deload,
                 noPedals = info.noPedals,
+                weakFoot = profile.weakFoot,
+                soloLeg = soloLeg,
             )
             else -> null
         }

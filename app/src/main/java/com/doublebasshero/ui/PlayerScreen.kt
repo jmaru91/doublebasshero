@@ -78,6 +78,7 @@ private fun Running(vm: AppViewModel, s: LiveSession) {
         while (true) {
             withFrameNanos { }
             pos = c.metronome.position()
+            // Warm-up notation: 8th notes, two per quarter click.
             eighth = c.metronome.eighthPosition()
         }
     }
@@ -165,7 +166,7 @@ private fun nextLabel(s: LiveSession): String {
     val next = r.steps.drop(r.index + 1).firstOrNull { it !is Step.Rest } ?: return "Summary"
     return when (next) {
         is Step.Work -> "${next.exercise.title} · Set ${next.set}/${next.of}"
-        is Step.Warmup -> Warmup.exercises[next.index].title
+        is Step.Warmup -> r.plan.warmup[next.index].title
         is Step.BenchmarkTest -> "Benchmark"
         else -> ""
     }
@@ -174,7 +175,7 @@ private fun nextLabel(s: LiveSession): String {
 @Composable
 private fun StepHeader(s: LiveSession, step: Step) {
     val (label, title, sub) = when (step) {
-        is Step.Warmup -> Triple((if (step.rewarm) "Re-warm-up " else "") + "${step.index + 1}/${Warmup.exercises.size}", Warmup.exercises[step.index].title, Warmup.exercises[step.index].subtitle)
+        is Step.Warmup -> s.runner.plan.warmup[step.index].let { ex -> Triple((if (step.rewarm) "Re-warm-up " else "") + "${step.index + 1}/${s.runner.plan.warmup.size}", ex.title, ex.subtitle) }
         is Step.Work -> Triple("Exercise ${step.exerciseIndex}/${step.exerciseCount} · Set ${step.set}/${step.of}", step.exercise.title, step.exercise.description)
         is Step.BenchmarkTest -> Triple("4:00 · non-stop 16ths", "Benchmark", "Clean form for all four minutes")
         is Step.Rest -> Triple(
@@ -197,7 +198,10 @@ private fun PlayView(s: LiveSession, step: Step, color: Color, pos: Pair<Int, In
     Row(verticalAlignment = Alignment.Bottom) {
         Hud("$bpm", 120.sp, color)
         HGap(8.dp)
-        Hud("BPM", 20.sp, C.muted, Modifier.padding(bottom = 18.dp))
+        Column(Modifier.padding(bottom = 18.dp)) {
+            Hud("BPM", 20.sp, C.muted)
+            if (step is Step.Warmup) Text("8ths: 2 notes per click", color = C.muted, fontSize = 12.sp)
+        }
     }
     if (step is Step.Work) {
         val prev = r.sets[step.exercise].orEmpty()
@@ -224,7 +228,7 @@ private fun PlayView(s: LiveSession, step: Step, color: Color, pos: Pair<Int, In
         }
     }
     if (step is Step.Warmup) {
-        StepGrid(step.index, if (active) eighth else null)
+        StepGrid(r.plan.warmup[step.index], if (active) eighth else null, r.plan.weakFoot)
     } else {
         val pattern = SessionRunner.pattern(r)
         val bar = if (active) pos!!.second else -1
@@ -243,39 +247,21 @@ private fun PlayView(s: LiveSession, step: Step, color: Color, pos: Pair<Int, In
     }
 }
 
-/** Warm-up step grid: one cell per 8th note, R/L per foot, empty = rest; cursor follows the metronome. */
+/** Warm-up pattern as drum notation; the highlighted note follows the metronome. */
 @Composable
-private fun StepGrid(index: Int, eighth: Long?) {
-    val bars = Warmup.exercises[index].bars
+private fun StepGrid(ex: com.doublebasshero.engine.WarmupExercise, eighth: Long?, weakFoot: com.doublebasshero.engine.Foot?) {
+    val bars = ex.bars
+    val passes = ex.passes(weakFoot)
     val activeBar = eighth?.let { ((it / 8) % bars.size).toInt() }
     val activeCell = eighth?.let { (it % 8).toInt() }
+    val pass = eighth?.let { (it / (bars.size * 8L)).toInt() + 1 }?.coerceAtMost(passes)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        bars.forEachIndexed { bi, bar ->
-            Row(
-                Modifier.fillMaxWidth().alpha(if (bars.size == 1 || activeBar == null || activeBar == bi) 1f else 0.55f),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                (0..3).forEach { beat ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        (0..1).forEach { c ->
-                            val i = beat * 2 + c
-                            val ch = bar[i]
-                            val bg = when (ch) { 'R' -> C.speed; 'L' -> C.left; else -> Color.Transparent }
-                            val on = activeBar == bi && activeCell == i
-                            Box(
-                                Modifier.size(38.dp, 28.dp).clip(RoundedCornerShape(4.dp)).background(bg)
-                                    .border(if (on) 2.dp else 1.dp, if (on) C.text else if (ch == '-') Color(0xFF3A475E) else bg, RoundedCornerShape(4.dp)),
-                                contentAlignment = Alignment.Center,
-                            ) { if (ch != '-') Text("$ch", style = hud(15.sp, color = C.ink)) }
-                        }
-                    }
-                }
-            }
-        }
+        Label(if (pass == null) "$passes passes" else "Pass $pass of $passes", Modifier.align(Alignment.CenterHorizontally))
+        WarmupNotation(ex, activeBar, activeCell)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)) {
             Legend(C.speed, "R right foot")
             Legend(C.left, "L left foot")
-            Legend(Color.Transparent, "rest", Color(0xFF3A475E))
+            if (ex.hats != null) Text("x hi-hat · ● snare", color = C.muted, fontSize = 12.sp)
         }
     }
 }

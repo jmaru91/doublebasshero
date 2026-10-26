@@ -125,7 +125,7 @@ class Metronome {
         return (b % 4).toInt() to (b / 4).toInt()
     }
 
-    /** Fractional 8th-note position within the current pattern (for step grids). */
+    /** 8th notes played since the pattern started (count-in excluded), or null: two per click. */
     fun eighthPosition(): Long? {
         val g = grid ?: return null
         val t = track ?: return null
@@ -159,10 +159,7 @@ class Metronome {
                 while (true) {
                     val frame = g.startFrame + (k * g.framesPerBeat).toLong()
                     if (frame >= base + chunk) break
-                    if (frame >= base) {
-                        val s = clickFor(g, k)
-                        voices += Voice(s, -(frame - base).toInt())
-                    }
+                    if (frame >= base) voices += Voice(clickFor(g, k), -(frame - base).toInt())
                     k++
                 }
             }

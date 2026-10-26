@@ -115,36 +115,97 @@ enum class FormRating(val score: Int, val title: String) {
     BROKEN(0, "Broken"),
 }
 
+@Serializable
+enum class Foot(val title: String) { RIGHT("Right"), LEFT("Left") }
+
 /**
- * A warm-up exercise drawn as a step grid: one string per bar, one character per
- * 8th note. 'R' / 'L' = foot, '-' = rest.
+ * A warm-up exercise: one string per bar, one character per 8th note.
+ * Feet: 'R' / 'L' = foot, '-' = rest. Hands (as written in the PDF, null when the
+ * exercise is feet only): [hats] 'x' = hi-hat, [snare] 's' = snare.
+ * [foot] is set for the one-foot exercises. [basePasses] = whole passes of the pattern.
  */
-data class WarmupExercise(val title: String, val subtitle: String, val bars: List<String>)
+data class WarmupExercise(
+    val title: String,
+    val subtitle: String,
+    val bars: List<String>,
+    val foot: Foot? = null,
+    val hats: List<String>? = null,
+    val snare: List<String>? = null,
+    val basePasses: Int = Warmup.defaultPasses(bars.size),
+) {
+    /** The weaker foot's Solo Leg gets one extra pass. */
+    fun passes(weakFoot: Foot? = null): Int = basePasses + if (weakFoot != null && foot == weakFoot) 1 else 0
+}
 
 object Warmup {
     /** Solo Leg 1 (two bars) and Solo Leg 2 (one bar) as written, in 16ths. */
-    private val soloWritten = listOf("xxx-xxx-xxx-xxx-", "xxxxx---xxxxx---", "xxx-xxxx--xxxxx-")
+    private val solo1Written = listOf("xxx-xxx-xxx-xxx-", "xxxxx---xxxxx---")
+    private val solo2Written = listOf("xxx-xxxx-xx-xxx-")
+
+    /** Hands in the PDF's Solo Leg: hi-hat in 8ths, snare on beats 2 and 4 (16th grid). */
+    private const val SOLO_HATS = "x-x-x-x-x-x-x-x-"
+    private const val SOLO_SNARE = "----s-------s---"
+
+    /** Each exercise plays whole passes of its pattern, at least this many bars. */
+    const val MIN_BARS = 8
+
+    /**
+     * Solo Leg alternates between days. The one of the day plays 16 bars on the right
+     * foot and a bit more, 24 bars, on the left: Solo Leg 1 (4 bars) 4 / 6 passes,
+     * Solo Leg 2 (2 bars) 8 / 12 passes.
+     */
+    fun soloBars(foot: Foot): Int = if (foot == Foot.LEFT) 24 else 16
+
+    /** At least 2 passes and at least [MIN_BARS] bars, never cut mid-pattern. */
+    fun defaultPasses(bars: Int): Int = maxOf(2, (MIN_BARS + bars - 1) / bars)
 
     /** The warm-up plays everything in 8ths: each written bar of 16ths becomes two bars. */
-    private val solo8 = soloWritten.flatMap { listOf(it.substring(0, 8), it.substring(8)) }
+    private fun to8ths(written: List<String>) = written.flatMap { listOf(it.substring(0, 8), it.substring(8)) }
 
-    val exercises: List<WarmupExercise> = listOf(
+    private val stickings = listOf(
         WarmupExercise("Sticking 1", "8th notes · alternate, then four on one foot", listOf("RLRLRRRR", "LRLRLLLL")),
         WarmupExercise(
             "Sticking 2", "8th notes · alternate, then twelve on one foot",
             listOf("RLRLRRRR", "RRRRRRRR", "LRLRLLLL", "LLLLLLLL"),
         ),
-        WarmupExercise("Solo leg · right", "8th notes · Solo Leg 1 + 2 · right foot only", solo8.map { it.replace('x', 'R') }),
-        WarmupExercise("Solo leg · left", "8th notes · Solo Leg 1 + 2 · left foot only", solo8.map { it.replace('x', 'L') }),
     )
 
-    /** Whole warm-up length; derived from the reference session durations. */
-    const val TOTAL_SEC = 140
+    /**
+     * The warm-up of a day. [soloLeg] = 1 or 2: that Solo Leg only, with double the
+     * passes (they alternate between training days); 0 = both, as in sessions saved
+     * by older versions.
+     */
+    fun exercises(soloLeg: Int = 0): List<WarmupExercise> {
+        val written = when (soloLeg) { 1 -> solo1Written; 2 -> solo2Written; else -> solo1Written + solo2Written }
+        val bars = to8ths(written)
+        val hats = to8ths(List(written.size) { SOLO_HATS })
+        val snare = to8ths(List(written.size) { SOLO_SNARE })
+        val name = if (soloLeg in 1..2) "Solo Leg $soloLeg" else "Solo Leg 1 + 2"
+        fun solo(foot: Foot) = WarmupExercise(
+            "$name · ${foot.title.lowercase()}", "8th notes · ${foot.title.lowercase()} foot only",
+            bars.map { it.replace('x', if (foot == Foot.RIGHT) 'R' else 'L') }, foot, hats, snare,
+            if (soloLeg in 1..2) soloBars(foot) / bars.size else defaultPasses(bars.size),
+        )
+        return stickings + solo(Foot.RIGHT) + solo(Foot.LEFT)
+    }
 
-    val secondsPerExercise: Int get() = TOTAL_SEC / exercises.size
+    /** Solo Leg 1 and 2 alternate: [sessionsBefore] = training sessions already done. */
+    fun soloLegFor(sessionsBefore: Int): Int = sessionsBefore % 2 + 1
 
-    /** Warm-up tempo: a relaxed 70% of the True BPM. */
-    fun bpm(trueBpm: Int): Int = (trueBpm * 0.7).toInt().coerceAtLeast(40)
+    /**
+     * Warm-up metronome tempo (quarter-note clicks; the notes are 8ths, two per
+     * click), as a share of the True BPM: the stickings ramp up (65% → 75%), both
+     * Solo Leg feet play at the same 85%.
+     */
+    private val TEMPO = listOf(0.65, 0.75, 0.85, 0.85)
+
+    const val MIN_BPM = 40
+
+    fun bpm(trueBpm: Int, index: Int): Int = (trueBpm * TEMPO[index]).toInt().coerceAtLeast(MIN_BPM)
+
+    /** Exact length of an exercise in ms (count-in excluded): passes × bars × 4 beats. */
+    fun millis(ex: WarmupExercise, bpm: Int, weakFoot: Foot? = null): Long =
+        ex.passes(weakFoot) * ex.bars.size * 4 * 60_000L / bpm
 }
 
 /** Rest hints. They are suggestions: nothing starts on its own. */

@@ -48,6 +48,9 @@ data class LiveSession(
 ) {
     val step: Step? get() = runner.step
     val stepSeconds: Int get() = step?.let { SessionRunner.hintSeconds(runner.plan, it) } ?: 0
+
+    /** Exact length of a timed step (warm-up: whole passes of the pattern). */
+    val stepMillis: Long get() = step?.let { SessionRunner.stepMillis(runner.plan, it) } ?: 0
 }
 
 /**
@@ -141,7 +144,7 @@ class SessionController(
         if (SessionRunner.isTimed(step)) {
             val countIn = when (step) {
                 is Step.Work, is Step.BenchmarkTest -> 4
-                is Step.Warmup -> if (step.index == 0) 4 else 0
+                is Step.Warmup -> 4 // 4 count-in clicks before every exercise, so you switch pattern cleanly
                 else -> 0
             }
             val delayMs = metronome.play(SessionRunner.bpm(s.runner), SessionRunner.pattern(s.runner), countIn)
@@ -159,7 +162,7 @@ class SessionController(
         if (!voice) return
         speakerSay(
             when (step) {
-                is Step.Warmup -> (if (step.rewarm) "Re-warm-up. " else "") + Warmup.exercises[step.index].title + "."
+                is Step.Warmup -> (if (step.rewarm) "Re-warm-up. " else "") + r.plan.warmup[step.index].title + "."
                 is Step.Work -> "${step.exercise.title}. Set ${step.set} of ${step.of}. ${SessionRunner.bpm(r, step)}."
                 is Step.BenchmarkTest -> "Benchmark. Four minutes at ${step.bpm}."
                 is Step.Rest -> when (step.kind) {
@@ -184,7 +187,7 @@ class SessionController(
         val elapsed = (now - stepStart).coerceAtLeast(0)
         if (SessionRunner.isTimed(step)) {
             val counting = now < stepStart
-            if (!counting && elapsed >= s.stepSeconds * 1000L) {
+            if (!counting && elapsed >= s.stepMillis) {
                 advance()
                 return
             }

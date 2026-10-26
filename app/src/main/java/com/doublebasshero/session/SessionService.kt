@@ -185,7 +185,7 @@ class SessionService : LifecycleService() {
             null -> b.setContentTitle("Double Bass Hero")
             else -> {
                 val title = when (step) {
-                    is Step.Warmup -> "Warm-up · ${Warmup.exercises[step.index].title}"
+                    is Step.Warmup -> "Warm-up · ${r.plan.warmup[step.index].title}"
                     is Step.Work -> "${step.exercise.title} · Set ${step.set}/${step.of}"
                     is Step.BenchmarkTest -> "Benchmark · 4:00"
                     else -> ""
@@ -211,7 +211,7 @@ class SessionService : LifecycleService() {
         r.steps.drop(r.index + 1).firstOrNull { it !is Step.Rest }?.let {
             when (it) {
                 is Step.Work -> it.exercise.title
-                is Step.Warmup -> Warmup.exercises[it.index].title
+                is Step.Warmup -> r.plan.warmup[it.index].title
                 is Step.BenchmarkTest -> "Benchmark"
                 else -> ""
             }

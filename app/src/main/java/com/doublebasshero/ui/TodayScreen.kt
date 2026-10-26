@@ -326,8 +326,11 @@ private fun DayCard(vm: AppViewModel, d: AppData, sel: LocalDate) {
             }
             Column {
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                    Body("Warm-up + solo leg", Modifier.weight(1f))
-                    Text("~2′", style = hud(16.sp, FontWeight.Bold, C.muted))
+                    Body("Warm-up · Solo Leg ${plan.soloLeg}", Modifier.weight(1f))
+                    val warmSec = com.doublebasshero.engine.SessionRunner.steps(plan)
+                        .filterIsInstance<com.doublebasshero.engine.Step.Warmup>()
+                        .sumOf { com.doublebasshero.engine.SessionRunner.hintSeconds(plan, it) + 240 / plan.warmupBpm(it.index) } // + count-in bar
+                    Text("~${(warmSec + 30) / 60}′", style = hud(16.sp, FontWeight.Bold, C.muted))
                 }
                 plan.exercises.forEach { e ->
                     Box(Modifier.fillMaxWidth().height(1.dp).background(C.line))

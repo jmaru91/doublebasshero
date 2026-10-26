@@ -354,9 +354,6 @@ private fun DayCard(vm: AppViewModel, d: AppData, sel: LocalDate) {
                     }
                 }
             }
-            ToggleRow("Prioritize weak spots", "More sets for your worst exercise, taken from your best", d.profile.prioritizeWeak) { on ->
-                vm.updateSettings { it.copy(prioritizeWeak = on) }
-            }
         }
         if (plan != null && isToday) {
             PrimaryButton(if (plan.isBenchmark) "Start benchmark" else "Start session", { vm.startDay(sel) }, color = color)

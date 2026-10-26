@@ -267,6 +267,7 @@ A day the user did not train **counts as a rest day**. Because a skip is an extr
   | 1 | E |
 
 - **First week:** if the user starts mid-week, the days before the start are plain rest and the week keeps the usual days off (no make-up offers). The remaining days get Speed first, then Hybrid, then Endurance.
+- **Undo a skip:** today's skip can be undone (on Today and in "Edit this week") in case it was tapped by mistake; the week is re-planned and any make-up suggestion withdrawn. Past days can't be un-skipped: without a session they already counted as rest.
 - **Busy week, known in advance:** the user opens "Edit this week", marks the days they can't train, and the app plans the remaining days with the table above.
 - **Effects:**
   - Skipped sessions don't count in the week review; a day type with no completed session keeps its start BPM.

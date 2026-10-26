@@ -146,6 +146,14 @@ fun EditWeekScreen(vm: AppViewModel) {
                             color = C.muted, fontSize = 12.sp,
                         )
                     }
+                    if (date == d.today && info.state == DayState.SKIPPED) {
+                        Box(
+                            Modifier.clip(RoundedCornerShape(10.dp))
+                                .border(1.dp, C.speed, RoundedCornerShape(10.dp))
+                                .clickable(role = Role.Button) { vm.unskipToday() }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                        ) { Text("UNDO SKIP", style = hud(15.sp, FontWeight.Bold, C.text)) }
+                    }
                     if (editable) {
                         Box(
                             Modifier.clip(RoundedCornerShape(10.dp))

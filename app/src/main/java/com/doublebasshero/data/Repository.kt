@@ -233,6 +233,11 @@ class Repository(private val dao: TrainingDao) {
         it.copy(skipped = (csvDays(it.skipped) + date).csv(), makeup = -1)
     }
 
+    /** Undo a skip tapped by mistake; any make-up suggestion is re-planned. */
+    suspend fun unskipDay(date: LocalDate) = editOverride(date) {
+        it.copy(skipped = (csvDays(it.skipped) - date).csv(), makeup = -1)
+    }
+
     suspend fun toggleUnavailable(date: LocalDate) = editOverride(date) {
         val set = csvDays(it.unavailable)
         it.copy(unavailable = (if (date in set) set - date else set + date).csv(), makeup = -1)

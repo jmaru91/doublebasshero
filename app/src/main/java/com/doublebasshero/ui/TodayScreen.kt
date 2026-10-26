@@ -362,6 +362,10 @@ private fun DayCard(vm: AppViewModel, d: AppData, sel: LocalDate) {
             PrimaryButton(if (plan.isBenchmark) "Start benchmark" else "Start session", { vm.startDay(sel) }, color = color)
             GhostButton("I can't train today", { vm.skipToday() }, Modifier.fillMaxWidth())
         }
+        if (isToday && info.state == DayState.SKIPPED) {
+            Body("Skipped by mistake? Today is still yours.", color = C.muted, size = 13.sp)
+            GhostButton("Undo — I can train today", { vm.unskipToday() }, Modifier.fillMaxWidth(), C.text, C.speed)
+        }
         info.session?.let { SessionRows(it) }
     }
 }

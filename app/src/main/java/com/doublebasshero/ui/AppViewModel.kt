@@ -212,6 +212,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         Reminders.reschedule(ctx)
     }
 
+    fun unskipToday() = viewModelScope.launch {
+        repo.unskipDay(LocalDate.now())
+        Reminders.reschedule(ctx)
+    }
+
     fun benchmarkResult(passed: Boolean) = viewModelScope.launch {
         val s = live.value ?: return@launch
         val plan = s.runner.plan

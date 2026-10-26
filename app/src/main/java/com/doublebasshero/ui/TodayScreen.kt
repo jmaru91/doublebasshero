@@ -84,7 +84,7 @@ fun TodayScreen(vm: AppViewModel) {
                 Hud("Double Bass Hero", 20.sp, C.speed, Modifier.weight(1f), italic = true)
                 Text(d.today.label().uppercase(), style = hud(14.sp, FontWeight.SemiBold, C.muted))
                 HGap(10.dp)
-                IconBox(Icons.bell, "Settings") { vm.go(Screen.Settings) }
+                IconBox(Icons.gear, "Settings") { vm.go(Screen.Settings) }
             }
 
             // Level, True BPM, cycle

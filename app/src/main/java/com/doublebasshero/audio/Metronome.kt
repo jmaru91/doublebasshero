@@ -9,6 +9,7 @@ import com.doublebasshero.engine.BarKind
 import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.sin
+import kotlin.math.tanh
 
 /**
  * Sample-accurate metronome on one continuous AudioTrack stream.
@@ -22,12 +23,12 @@ class Metronome {
     private val sampleRate = AudioTrack.getNativeOutputSampleRate(AudioManager.STREAM_MUSIC).takeIf { it > 0 } ?: 48000
     private val chunk = 256
 
-    private val accentHigh = tone(1600.0, 0.045, 0.9)
-    private val accentLow = tone(1250.0, 0.045, 0.85)
-    private val beat = tone(1000.0, 0.035, 0.55)
-    private val countIn = tone(800.0, 0.04, 0.6)
-    private val chime = concat(tone(880.0, 0.12, 0.45), tone(1320.0, 0.18, 0.45))
-    private val restCue = concat(tone(660.0, 0.12, 0.5), tone(990.0, 0.2, 0.5))
+    private val accentHigh = tone(1600.0, 0.07, 1.0)
+    private val accentLow = tone(1250.0, 0.07, 1.0)
+    private val beat = tone(1000.0, 0.06, 0.8)
+    private val countIn = tone(800.0, 0.06, 0.75)
+    private val chime = concat(tone(880.0, 0.12, 0.6), tone(1320.0, 0.18, 0.6))
+    private val restCue = concat(tone(660.0, 0.12, 0.7), tone(990.0, 0.2, 0.7))
 
     /** Frames written so far; the beat grid is expressed in these frames. */
     @Volatile private var writtenFrames = 0L
@@ -175,7 +176,7 @@ class Metronome {
                 v.pos += chunk
                 if (v.pos >= v.samples.size) it.remove()
             }
-            for (i in 0 until chunk) out[i] = (mix[i].coerceIn(-1f, 1f) * Short.MAX_VALUE).toInt().toShort()
+            for (i in 0 until chunk) out[i] = (limit(mix[i]) * Short.MAX_VALUE).toInt().toShort()
             t.write(out, 0, chunk)
             writtenFrames = base + chunk
         }
@@ -189,13 +190,30 @@ class Metronome {
         return if (bar == BarKind.SIXTEENTHS) accentHigh else accentLow
     }
 
+    /**
+     * A click: a softly saturated sine (close to a square wave) that fades out.
+     * Same peak as a pure sine but much more energy and brightness, so it stays
+     * audible over a kick drum.
+     */
     private fun tone(freq: Double, seconds: Double, gain: Double): FloatArray {
         val n = (sampleRate * seconds).toInt()
+        val norm = tanh(DRIVE)
         return FloatArray(n) { i ->
             val t = i.toDouble() / sampleRate
             val attack = (i / (sampleRate * 0.002)).coerceAtMost(1.0)
-            (sin(2 * PI * freq * t) * gain * attack * exp(-t * 6.0 / seconds)).toFloat()
+            (tanh(DRIVE * sin(2 * PI * freq * t)) / norm * gain * attack * exp(-t * 3.0 / seconds)).toFloat()
         }
+    }
+
+    /** Soft limiter: overlapping sounds (a click under a chime) don't clip harshly. */
+    private fun limit(x: Float): Float {
+        val a = kotlin.math.abs(x)
+        if (a <= 0.9f) return x
+        return kotlin.math.sign(x) * (0.9f + 0.1f * tanh((a - 0.9) / 0.1).toFloat())
+    }
+
+    private companion object {
+        const val DRIVE = 3.0
     }
 
     private fun concat(a: FloatArray, b: FloatArray): FloatArray = a + FloatArray((sampleRate * 0.03).toInt()) + b

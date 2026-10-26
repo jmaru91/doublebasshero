@@ -34,6 +34,8 @@ Each phase ends with `./gradlew :engine:test :app:assembleDebug` green.
 
 All six phases are implemented (v0.1.0). Verified on an Android 15 emulator: onboarding, Today, player (warm-up grids, Speed pattern, rest rating and ramp), close dialog with partial save, crash recovery after the app was killed mid-session, calendar, progress, levels, settings, edit week, lock-screen session notification, and a posted training reminder.
 
+v0.2.0 adds no-pedals mode (engine rules + tests, database migration 1 → 2, Settings toggle with return date). Verified on the emulator, including the upgrade over v0.1.0 data.
+
 Not verified yet: audio and voice by ear, headset buttons, reminders firing at their real time, the week rollover on an actual Monday.
 
 ### Debug helper

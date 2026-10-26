@@ -28,6 +28,7 @@ data class NotificationDay(
     val type: DayType,
     val estimatedMinutes: Int,
     val pedalStartBpm: Int?,
+    val noPedals: Boolean = false,
     val sessionDone: Boolean,
     val weekReviewPending: Boolean,
     val reviewChanges: Int,
@@ -89,7 +90,8 @@ object NotificationPlanner {
             day.type.isTraining && NotificationType.TRAINING_REMINDER in on -> {
                 types += NotificationType.TRAINING_REMINDER
                 titles += "${day.type.title} day · ~${day.estimatedMinutes} min"
-                day.pedalStartBpm?.let { texts += "Pedal Normal starts at $it." }
+                if (day.noPedals) texts += "No-pedals mode: floor exercises only."
+                else day.pedalStartBpm?.let { texts += "Pedal Normal starts at $it." }
                 actions += listOf(NotificationAction.START, NotificationAction.NOT_TODAY)
             }
             day.type == DayType.REST && NotificationType.REST_DAY in on -> {

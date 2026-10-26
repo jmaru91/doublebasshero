@@ -276,8 +276,10 @@ fun LevelsScreen(vm: AppViewModel) {
                         Hud("Benchmark · ${level.benchmarkBpm} BPM", 22.sp, modifier = Modifier.weight(1f))
                         Chip(if (unlocked) "Unlocked" else "Locked", if (unlocked) C.hybrid else C.dim, size = 13.sp)
                     }
+                    val noPedalsNow = d.calendar.day(d.today).noPedals
                     Body(
-                        if (unlocked) (day?.let { "Every exercise is at the cap on Endurance days. Suggested for ${it.label()}, the next fresh day." } ?: "Unlocked. It will be scheduled on the next fresh day.")
+                        if (unlocked && noPedalsNow && day == null) "Unlocked. It's played on pedals, so it waits until no-pedals mode is off."
+                        else if (unlocked) (day?.let { "Every exercise is at the cap on Endurance days. Suggested for ${it.label()}, the next fresh day." } ?: "Unlocked. It will be scheduled on the next fresh day.")
                         else "${atCap.size} of ${level.exercises.size} exercises at the cap (${level.cap}) on Endurance days, rated clean. It unlocks when all of them get there.",
                         size = 13.sp,
                     )
@@ -387,7 +389,37 @@ fun SettingsScreen(vm: AppViewModel) {
         Card(padding = 12.dp) {
             ToggleRow("End-of-rest cue", "Sound and vibration when the suggested rest is up", p.restCue) { on -> vm.updateSettings { it.copy(restCue = on) } }
             ToggleRow("Voice prompts", "Announces exercise, set and BPM", p.voicePrompts) { on -> vm.updateSettings { it.copy(voicePrompts = on) } }
+        }
+        Label("Training")
+        Card(padding = 12.dp) {
             ToggleRow("Prioritize weak spots", "More sets for your worst exercise, taken from your best", p.prioritizeWeak) { on -> vm.updateSettings { it.copy(prioritizeWeak = on) } }
+            ToggleRow(
+                "No-pedals mode",
+                "Floor exercises only, for when you're away from your pedals (e.g. on holiday). Same session length.",
+                p.noPedals,
+            ) { on -> vm.updateSettings { it.copy(noPedals = on, noPedalsUntil = -1) } }
+            if (p.noPedals) {
+                val today = LocalDate.now()
+                val until = p.noPedalsUntil.takeIf { it >= 0 }?.let { LocalDate.ofEpochDay(it) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Back with pedals", color = C.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (until == null) "No end date: turn it off by hand" else "The mode switches off by itself that day", color = C.muted, fontSize = 12.sp)
+                    }
+                    SquareButton("−", "One day earlier") {
+                        val next = until?.minusDays(1)
+                        vm.updateSettings { it.copy(noPedalsUntil = if (next == null || next <= today) -1 else next.toEpochDay()) }
+                    }
+                    Text(until?.short()?.uppercase() ?: "NONE", style = hud(19.sp), modifier = Modifier.width(72.dp), textAlign = TextAlign.Center)
+                    SquareButton("+", "One day later") {
+                        val next = until?.plusDays(1) ?: today.plusDays(7)
+                        vm.updateSettings { it.copy(noPedalsUntil = next.toEpochDay()) }
+                    }
+                }
+                if (until != null) {
+                    Text("CLEAR DATE", style = hud(14.sp, FontWeight.Bold, C.speed), modifier = Modifier.clickable(role = Role.Button) { vm.updateSettings { it.copy(noPedalsUntil = -1) } }.padding(vertical = 6.dp))
+                }
+            }
         }
         Body("Your usual days off: ${WD_FULL[p.restDay1]} and ${WD_FULL[p.restDay2]}. To change a single week, use \"Edit this week\" on Today.", color = C.muted, size = 13.sp)
     }

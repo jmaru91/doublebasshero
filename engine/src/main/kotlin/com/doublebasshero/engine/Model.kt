@@ -78,6 +78,24 @@ object Levels {
     fun byNumber(number: Int): Level = all.first { it.number == number }
 }
 
+/** For periods without pedals (e.g. holidays): floor exercises only. */
+object NoPedals {
+    fun exercises(level: Level): List<Exercise> =
+        if (level.number <= 5) listOf(Exercise.FLOOR_HIP, Exercise.FLOOR_HEEL_UP, Exercise.FLOOR_HEEL_DOWN)
+        else listOf(Exercise.FLOOR_HEEL_DOWN, Exercise.FLOOR_ELEVATED_TAPS)
+
+    /**
+     * Pedal Normal's sets are spread over the floor exercises, so the session keeps
+     * its length. Extra sets go to the more advanced (later) exercises.
+     */
+    fun baseSets(level: Level): Map<Exercise, Int> {
+        val ex = exercises(level)
+        val total = level.exercises.size * level.setsPerExercise
+        val extra = total % ex.size
+        return ex.withIndex().associate { (i, e) -> e to total / ex.size + if (i >= ex.size - extra) 1 else 0 }
+    }
+}
+
 /** What one bar of the metronome pattern asks the player to do. */
 enum class BarKind { SIXTEENTHS, EIGHTHS, REST }
 

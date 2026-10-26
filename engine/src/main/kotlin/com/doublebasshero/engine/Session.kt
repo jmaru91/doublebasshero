@@ -17,6 +17,8 @@ data class SessionPlan(
     val exercises: List<PlannedExercise>,
     /** Only for BENCHMARK sessions. */
     val benchmarkBpm: Int? = null,
+    /** Floor exercises only (no-pedals mode). */
+    val noPedals: Boolean = false,
 ) {
     val cap: Int get() = Levels.byNumber(level).cap
     val setDurationSec: Int get() = Levels.byNumber(level).setDurationSec
@@ -37,10 +39,11 @@ object SessionBuilder {
         recentRatings: Map<Exercise, List<FormRating>>,
         prioritizeWeak: Boolean,
         deload: Boolean,
+        noPedals: Boolean = false,
     ): SessionPlan {
         require(dayType in DayType.PROGRESSING)
-        val (sets, weak) = if (prioritizeWeak) WeaknessBalancer.balance(level, recentRatings)
-        else level.exercises.associateWith { level.setsPerExercise } to null
+        val base = if (noPedals) NoPedals.baseSets(level) else level.exercises.associateWith { level.setsPerExercise }
+        val (sets, weak) = if (prioritizeWeak) WeaknessBalancer.balance(base, recentRatings) else base to null
         return SessionPlan(
             level = level.number,
             dayType = dayType,
@@ -48,7 +51,8 @@ object SessionBuilder {
             deload = deload,
             warmupBpm = Warmup.bpm(trueBpm),
             withWarmup = true,
-            exercises = level.exercises.map { ex ->
+            noPedals = noPedals,
+            exercises = base.keys.map { ex ->
                 val n = sets.getValue(ex)
                 PlannedExercise(
                     exercise = ex,

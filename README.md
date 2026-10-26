@@ -14,6 +14,7 @@ The training method follows the Art of Double Bass routine: three pillars (form,
   - a BPM ramp from set to set.
 - **Form decides**: you rate every set (Clean / Shaky / Broken). Each week the app recommends new start BPMs, and you confirm or adjust them.
 - **Benchmark and level up**: the benchmark unlocks only when every exercise reaches the level's top BPM on Endurance days, and it is scheduled on a fresh day.
+- **No-pedals mode**: for holidays and travel. Switched on in Settings, with an optional return date. Floor exercises replace Pedal Normal and keep the same session length; the benchmark waits until you're back on pedals.
 - **3 + 1 cycle**: three hard weeks, then a deload week. A week with fewer than 3 sessions counts as a deload.
 - **Works with the screen off**:
   - quarter-note metronome, sample-accurate, with the beat-1 accent telling you the bar type;
@@ -68,4 +69,4 @@ On phones with aggressive battery management, set the app to "Unrestricted" so t
 
 ## Status
 
-Version 0.1.0. Flows tested on an Android 15 emulator; installed and launched on a Fairphone 4. Still to verify: audio by ear, headphone buttons, and reminders and the week rollover at their real times. See [docs/PLAN.md](docs/PLAN.md).
+Version 0.2.0. Flows tested on an Android 15 emulator; installed and launched on a Fairphone 4. Still to verify: audio by ear, headphone buttons, and reminders and the week rollover at their real times. See [docs/PLAN.md](docs/PLAN.md).

@@ -1,6 +1,7 @@
 package com.doublebasshero.data
 
 import android.content.Context
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -11,6 +12,8 @@ import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Upsert
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 /** Single-row user profile and settings. */
@@ -38,6 +41,10 @@ data class ProfileEntity(
     val voicePrompts: Boolean = true,
     /** One-time message shown on Today (e.g. an interrupted session saved as partial). */
     val notice: String = "",
+    /** Floor exercises only, for periods without pedals. */
+    @ColumnInfo(defaultValue = "0") val noPedals: Boolean = false,
+    /** Return date (epoch day) from which the mode is off by itself, or -1. */
+    @ColumnInfo(defaultValue = "-1") val noPedalsUntil: Long = -1,
 )
 
 @Entity(tableName = "start_bpm", primaryKeys = ["exercise", "dayType"])
@@ -150,14 +157,22 @@ interface TrainingDao {
 
 @Database(
     entities = [ProfileEntity::class, StartBpmEntity::class, SessionEntity::class, WeekOverrideEntity::class, LevelEventEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class DbhDatabase : RoomDatabase() {
     abstract fun dao(): TrainingDao
 
     companion object {
+        /** v2: no-pedals mode. */
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE profile ADD COLUMN noPedals INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE profile ADD COLUMN noPedalsUntil INTEGER NOT NULL DEFAULT -1")
+            }
+        }
+
         fun create(context: Context): DbhDatabase =
-            Room.databaseBuilder(context, DbhDatabase::class.java, "dbh.db").build()
+            Room.databaseBuilder(context, DbhDatabase::class.java, "dbh.db").addMigrations(MIGRATION_1_2).build()
     }
 }

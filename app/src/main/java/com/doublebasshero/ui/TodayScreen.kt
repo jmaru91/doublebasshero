@@ -308,6 +308,9 @@ private fun DayCard(vm: AppViewModel, d: AppData, sel: LocalDate) {
             info.converted -> "Every exercise hit the cap (${d.level.cap}) on ${info.slot.title} days, so this is an Endurance day until you pass the benchmark." to C.endurance
             info.deload && info.type.isTraining -> "Deload week: half the sets, every set at the start BPM." to C.warm
             info.state == DayState.MAKEUP -> "Make-up session on one of your usual days off." to C.endurance
+            info.noPedals && info.type.isTraining && info.session == null ->
+                "No-pedals mode: floor exercises only, same session length" +
+                    (d.calendar.profile.noPedalsUntil?.let { ", until ${it.minusDays(1).label()}." } ?: ".") to C.speedSoft
             else -> null
         }
         note?.let { (t, c) -> Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFF1C2433)).padding(10.dp)) { Body(t, color = c, size = 13.sp) } }

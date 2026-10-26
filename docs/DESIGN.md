@@ -257,6 +257,25 @@ A day the user did not train **counts as a rest day**. Because a skip is an extr
   - Skipped sessions don't count in the week review; a day type with no completed session keeps its start BPM.
   - A week with fewer than 3 completed sessions counts as an **unplanned deload week**: it restarts the cycle (the next week is "Week 1 of 3") instead of counting as a hard week. Like a planned deload, it is followed by no week review, so start BPMs carry over.
 
+### 3.13b No-pedals mode
+
+For periods without pedals (holidays, travel), switched on and off in Settings, like "Prioritize weak spots".
+
+- **What you play:**
+
+  | Levels | Exercises without pedals |
+  |---|---|
+  | 1–5 | Floor Hip · Floor Heel-Up · Floor Heel-Down |
+  | 6–10 | Floor Heel-Down · Floor Elevated Taps |
+
+- **Same session length:** Pedal Normal's sets are spread over the floor exercises (level 4: 4 + 4 + 4 sets; level 6: 4 + 5; level 8: 4 + 4). Extra sets go to the more advanced exercise. Weakness balancing, ramp, rests and deload work as usual.
+- **Return date (optional):** when turning the mode on you can set the day you're back with your pedals; from that day the mode is off by itself. Without a date it stays on until switched off.
+- **What doesn't move:**
+  - Pedal Normal's start BPMs stay frozen: no Pedal Normal session, no change.
+  - The benchmark is played on pedals, so it is never scheduled on a no-pedals day.
+  - Speed/Hybrid days turned into Endurance stay that way: the cap rules look at the latest session in which each exercise was actually played, so floor-only sessions don't undo them.
+- **What does move:** the floor exercises progress through the week review as usual, and the sessions count for the cycle.
+
 ### 3.14 Other rules from the PDF
 
 - Recommended 3–5 training days a week, 30–45 min per session.
@@ -514,6 +533,7 @@ The whole session must work with the screen off and the phone on the floor or a 
 - Rest days (re-runs the week recommendation).
 - Notifications: reminder time per weekday, missed-session time, one toggle per type (§6.8).
 - Session: end-of-rest cue, voice prompts.
+- Training: prioritize weak spots, no-pedals mode (with optional return date).
 - Weakness balancing on/off.
 - Data export/import (backup).
 

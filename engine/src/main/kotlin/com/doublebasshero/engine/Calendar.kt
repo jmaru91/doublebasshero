@@ -20,8 +20,13 @@ data class Profile(
     val cycleStart: LocalDate,
     val benchmarkUnlocked: Boolean,
     val prioritizeWeak: Boolean = true,
+    val noPedals: Boolean = false,
+    /** Back with pedals from this day on (the mode switches itself off); null = until turned off. */
+    val noPedalsUntil: LocalDate? = null,
 ) {
     val level: Level get() = Levels.forTrueBpm(trueBpm)
+
+    fun noPedalsOn(date: LocalDate): Boolean = noPedals && (noPedalsUntil == null || date < noPedalsUntil)
 }
 
 data class DayInfo(
@@ -37,6 +42,8 @@ data class DayInfo(
     /** A Speed/Hybrid slot played as Endurance because every exercise hit the cap. */
     val converted: Boolean,
     val session: SavedSession?,
+    /** No-pedals mode is on for this day. */
+    val noPedals: Boolean = false,
 ) {
     val canStart: Boolean get() = type.isTraining && (state == DayState.PLANNED || state == DayState.MAKEUP)
 }
@@ -104,16 +111,20 @@ class TrainingCalendar(
             cycleWeek = Cycle.weekIndex(profile.cycleStart, date),
             converted = converted,
             session = saved,
+            noPedals = profile.noPedalsOn(date),
         )
     }
 
-    /** The first fresh training day (right after a rest day, not in a deload week) once unlocked. */
+    /**
+     * The first fresh training day (right after a rest day, not in a deload week)
+     * once unlocked. The benchmark is played on pedals: never on a no-pedals day.
+     */
     val benchmarkDay: LocalDate? by lazy {
         if (!profile.benchmarkUnlocked || level.isTop) return@lazy null
         (0L until 28L).map { today.plusDays(it) }.firstOrNull { d ->
             val info = rawDay(d)
             val prev = rawDay(d.minusDays(1))
-            info.canStart && !info.deload && !prev.type.isTraining
+            info.canStart && !info.deload && !info.noPedals && !prev.type.isTraining
         }
     }
 
@@ -142,6 +153,7 @@ class TrainingCalendar(
             info.type == DayType.BENCHMARK -> SessionBuilder.benchmark(level, level.benchmarkBpm, profile.trueBpm, placement = false, slot = info.slot)
             info.type in DayType.PROGRESSING -> SessionBuilder.build(
                 level, info.type, info.slot, profile.trueBpm, startBpms, recentRatings(), profile.prioritizeWeak, info.deload,
+                noPedals = info.noPedals,
             )
             else -> null
         }

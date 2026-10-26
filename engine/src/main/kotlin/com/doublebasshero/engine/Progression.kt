@@ -50,14 +50,18 @@ object StartBpms {
      * Placement defaults: every day type starts so that the default ramp
      * (+2 per set) ends on the True BPM, never above the cap.
      */
+    fun default(level: Level, trueBpm: Int): Int =
+        (trueBpm - Ramp.DEFAULT_STEP * (level.setsPerExercise - 1)).coerceIn(30, level.cap)
+
     fun defaults(level: Level, trueBpm: Int): Map<StartKey, Int> {
-        val start = (trueBpm - Ramp.DEFAULT_STEP * (level.setsPerExercise - 1)).coerceIn(30, level.cap)
+        val start = default(level, trueBpm)
         return level.exercises.flatMap { ex -> DayType.PROGRESSING.map { StartKey(ex, it) to start } }.toMap()
     }
 
+    /** Works for any exercise, including the floor ones played in no-pedals mode at levels 6–10. */
     fun get(map: Map<StartKey, Int>, level: Level, trueBpm: Int, exercise: Exercise, dayType: DayType): Int {
         val type = if (dayType in DayType.PROGRESSING) dayType else DayType.ENDURANCE
-        return (map[StartKey(exercise, type)] ?: defaults(level, trueBpm).getValue(StartKey(exercise, type))).coerceAtMost(level.cap)
+        return (map[StartKey(exercise, type)] ?: default(level, trueBpm)).coerceAtMost(level.cap)
     }
 }
 
@@ -89,7 +93,9 @@ object WeeklyReview {
     fun recommend(level: Level, trueBpm: Int, startBpms: Map<StartKey, Int>, week: List<SessionResult>): List<Recommendation> =
         DayType.PROGRESSING.flatMap { type ->
             val sessions = week.filter { it.dayType == type && !it.deload && it.level == level.number }.sortedBy { it.date }
-            level.exercises.map { ex ->
+            // The level's exercises plus any floor exercise played in no-pedals mode.
+            val exercises = (level.exercises + sessions.flatMap { s -> s.exercises.map { it.exercise } }).distinct().sortedBy { it.ordinal }
+            exercises.map { ex ->
                 val from = StartBpms.get(startBpms, level, trueBpm, ex, type)
                 val results = sessions.mapNotNull { s -> s.of(ex)?.takeIf { it.sets.isNotEmpty() }?.let { s to it } }
                 if (results.isEmpty()) return@map Recommendation(ex, type, from, 0, ReviewReason.NoSession)
@@ -125,21 +131,26 @@ object WeeklyReview {
 
 object CapRules {
     /**
+     * Top BPM of [ex] in the latest session of [type] at this level in which it was
+     * actually played (partial and no-pedals sessions don't hide earlier results).
+     */
+    fun latestTop(level: Level, type: DayType, ex: Exercise, history: List<SessionResult>): Int? =
+        history.filter { it.dayType == type && it.level == level.number && !it.deload }
+            .filter { s -> s.of(ex)?.sets?.isNotEmpty() == true }
+            .maxByOrNull { it.date }?.of(ex)?.topBpm
+
+    /**
      * A Speed or Hybrid day turns into an Endurance day once every exercise of the
-     * level reached the cap in the latest session of that type at this level.
+     * level reached the cap on that day type.
      */
     fun converts(level: Level, type: DayType, history: List<SessionResult>): Boolean {
         if (type != DayType.SPEED && type != DayType.HYBRID) return false
-        val latest = history.filter { it.dayType == type && it.level == level.number && !it.deload }.maxByOrNull { it.date } ?: return false
-        return level.exercises.all { ex -> (latest.of(ex)?.topBpm ?: 0) >= level.cap }
+        return atCap(level, type, history).size == level.exercises.size
     }
 
-    /** Exercises at the cap in the latest session of [type] at this level. */
-    fun atCap(level: Level, type: DayType, history: List<SessionResult>): Set<Exercise> {
-        val latest = history.filter { it.dayType == type && it.level == level.number && !it.deload }.maxByOrNull { it.date }
-            ?: return emptySet()
-        return level.exercises.filter { (latest.of(it)?.topBpm ?: 0) >= level.cap }.toSet()
-    }
+    /** The level's exercises at the cap on [type], each judged on its latest session. */
+    fun atCap(level: Level, type: DayType, history: List<SessionResult>): Set<Exercise> =
+        level.exercises.filter { (latestTop(level, type, it, history) ?: 0) >= level.cap }.toSet()
 
     /**
      * The benchmark unlocks when, in one week's Endurance sessions, every exercise
@@ -165,9 +176,13 @@ object WeaknessBalancer {
      * (never below 1), so the session keeps the same total. Pedal Normal never
      * loses sets. Needs enough rated sets to judge.
      */
-    fun balance(level: Level, ratings: Map<Exercise, List<FormRating>>): Pair<Map<Exercise, Int>, Exercise?> {
-        val plan = level.exercises.associateWith { level.setsPerExercise }.toMutableMap()
-        val candidates = level.exercises.filter { it != Exercise.PEDAL_NORMAL }
+    fun balance(level: Level, ratings: Map<Exercise, List<FormRating>>): Pair<Map<Exercise, Int>, Exercise?> =
+        balance(level.exercises.associateWith { level.setsPerExercise }, ratings)
+
+    /** Same rule on any base plan (e.g. the no-pedals one): the weakest gets up to 2× its base sets. */
+    fun balance(base: Map<Exercise, Int>, ratings: Map<Exercise, List<FormRating>>): Pair<Map<Exercise, Int>, Exercise?> {
+        val plan = LinkedHashMap(base)
+        val candidates = base.keys.filter { it != Exercise.PEDAL_NORMAL }
         if (candidates.size < 2) return plan to null
         val scores = candidates.associateWith { ex ->
             ratings[ex]?.takeIf { it.size >= MIN_RATED_SETS }?.let { Ratings.formScore(it) }
@@ -176,7 +191,7 @@ object WeaknessBalancer {
         val sorted = candidates.sortedBy { scores.getValue(it) }
         val weak = sorted.first()
         if (scores.getValue(sorted.last())!! - scores.getValue(weak)!! < MIN_GAP) return plan to null
-        var need = level.setsPerExercise
+        var need = base.getValue(weak)
         for (ex in sorted.drop(1).reversed()) {
             if (need == 0) break
             val give = minOf(plan.getValue(ex) - 1, need)

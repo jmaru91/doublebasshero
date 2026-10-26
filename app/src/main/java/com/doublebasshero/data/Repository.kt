@@ -56,6 +56,8 @@ fun ProfileEntity.toProfile() = Profile(
     cycleStart = day(cycleStart),
     benchmarkUnlocked = benchmarkUnlocked,
     prioritizeWeak = prioritizeWeak,
+    noPedals = noPedals,
+    noPedalsUntil = noPedalsUntil.takeIf { it >= 0 }?.let { day(it) },
 )
 
 fun ProfileEntity.notificationPrefs() = NotificationPrefs(
@@ -247,8 +249,13 @@ class Repository(private val dao: TrainingDao) {
      * and unlocks the benchmark when that week earned it.
      */
     suspend fun rollover(today: LocalDate = LocalDate.now()) {
-        val p = dao.profileNow() ?: return
+        var p = dao.profileNow() ?: return
         if (!p.onboarded) return
+        if (p.noPedals && p.noPedalsUntil >= 0 && today.epoch() >= p.noPedalsUntil) {
+            // Back with pedals: the mode switched itself off.
+            p = p.copy(noPedals = false, noPedalsUntil = -1)
+            dao.saveProfile(p)
+        }
         val current = today.weekStart()
         var week = day(p.lastProcessedWeek).plusWeeks(1)
         if (week >= current) return
@@ -294,6 +301,7 @@ class Repository(private val dao: TrainingDao) {
             type = if (info.inProgram) info.type else DayType.REST,
             estimatedMinutes = plan?.let { (SessionBuilder.estimatedDurationSec(it) + 30) / 60 } ?: 0,
             pedalStartBpm = plan?.exercises?.firstOrNull { it.exercise == Exercise.PEDAL_NORMAL }?.startBpm,
+            noPedals = info.noPedals,
             sessionDone = info.session != null || data.sessionOn(date) != null,
             weekReviewPending = date == data.today && data.review != null,
             reviewChanges = data.review?.second?.count { it.delta != 0 } ?: 0,

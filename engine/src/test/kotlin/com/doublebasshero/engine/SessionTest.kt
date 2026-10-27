@@ -64,10 +64,11 @@ class SessionTest {
         assertTrue(total in 100..240, "about two to four minutes, was $total s")
     }
 
-    @Test fun `default start BPM ends the ramp on the True BPM`() {
+    @Test fun `first set starts at the True BPM and the ramp climbs from there`() {
         val p = plan()
-        assertTrue(p.exercises.all { it.startBpm == 108 })
-        assertEquals(112, SessionBuilder.projectedTop(p, p.exercises.first()))
+        assertTrue(p.exercises.all { it.startBpm == 112 })
+        assertEquals(116, SessionBuilder.projectedTop(p, p.exercises.first()))
+        assertEquals(119, StartBpms.default(l4, 125), "never above the cap")
         assertEquals(Exercise.PEDAL_NORMAL, p.exercises.last().exercise)
     }
 
@@ -107,19 +108,19 @@ class SessionTest {
     @Test fun `runner logs sets, ratings and the ramp`() {
         var s = SessionRunner.start(plan())
         repeat(4) { assertIs<Step.Warmup>(s.step); s = SessionRunner.advance(s) }
-        assertEquals(108, SessionRunner.bpm(s))
+        assertEquals(112, SessionRunner.bpm(s))
         s = SessionRunner.advance(s) // set 1 done
-        assertEquals(110, SessionRunner.nextBpm(s), "an unrated set counts as clean")
+        assertEquals(114, SessionRunner.nextBpm(s), "an unrated set counts as clean")
         s = SessionRunner.rate(s, FormRating.CLEAN)
-        assertEquals(110, SessionRunner.nextBpm(s))
+        assertEquals(114, SessionRunner.nextBpm(s))
         s = SessionRunner.advance(s) // rest done
-        assertEquals(110, SessionRunner.bpm(s))
+        assertEquals(114, SessionRunner.bpm(s))
         s = SessionRunner.advance(s) // set 2 done
         s = SessionRunner.rate(s, FormRating.SHAKY)
-        assertEquals(110, SessionRunner.nextBpm(s), "shaky holds the BPM")
+        assertEquals(114, SessionRunner.nextBpm(s), "shaky holds the BPM")
         s = SessionRunner.advance(s)
         val sets = s.sets.getValue(Exercise.FLOOR_HIP)
-        assertEquals(listOf(108, 110), sets.map { it.bpm })
+        assertEquals(listOf(112, 114), sets.map { it.bpm })
         assertEquals(listOf(2, 0), sets.map { it.rampDelta })
         assertEquals(listOf(FormRating.CLEAN, FormRating.SHAKY), sets.map { it.rating })
     }
@@ -128,12 +129,12 @@ class SessionTest {
         var s = SessionRunner.start(plan(DayType.HYBRID))
         repeat(5) { s = SessionRunner.advance(s) } // warm-up, set 1
         s = SessionRunner.rate(s, FormRating.CLEAN)
-        assertEquals(110, SessionRunner.nextBpm(s), "first clean set: +2")
+        assertEquals(114, SessionRunner.nextBpm(s), "first clean set: +2")
         repeat(2) { s = SessionRunner.advance(s) } // set 2
         s = SessionRunner.rate(s, FormRating.CLEAN)
-        assertEquals(114, SessionRunner.nextBpm(s), "second clean in a row: +4")
+        assertEquals(118, SessionRunner.nextBpm(s), "second clean in a row: +4")
         s = SessionRunner.rate(s, FormRating.SHAKY)
-        assertEquals(110, SessionRunner.nextBpm(s), "changing the rating changes the step")
+        assertEquals(114, SessionRunner.nextBpm(s), "changing the rating changes the step")
     }
 
     @Test fun `ramp never goes above the cap`() {

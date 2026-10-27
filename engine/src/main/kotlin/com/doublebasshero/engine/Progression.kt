@@ -50,8 +50,8 @@ object StartBpms {
      * Placement defaults: every day type starts so that the default ramp
      * (+2 per set) ends on the True BPM, never above the cap.
      */
-    fun default(level: Level, trueBpm: Int): Int =
-        (trueBpm - Ramp.DEFAULT_STEP * (level.setsPerExercise - 1)).coerceIn(30, level.cap)
+    /** Placement default: the first set starts at the True BPM; the ramp climbs from there, up to the cap. */
+    fun default(level: Level, trueBpm: Int): Int = trueBpm.coerceIn(30, level.cap)
 
     fun defaults(level: Level, trueBpm: Int): Map<StartKey, Int> {
         val start = default(level, trueBpm)

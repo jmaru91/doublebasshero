@@ -163,7 +163,7 @@ Session duration is therefore an estimate (~37 min).
 
 ### 3.6b Starting BPMs
 
-At placement (and after every level-up or retest) each exercise and day type starts so that the default ramp (+2 per set) ends on the True BPM, never above the cap: start = True BPM − 2 × (sets − 1). From then on the weekly review moves them.
+At placement (and after every level-up or retest) every exercise and day type **starts at the True BPM** (never above the cap); the ramp then climbs from there during the session. From then on the weekly review moves the start BPMs.
 
 ### 3.7 Ramp within a session
 

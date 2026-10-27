@@ -9,6 +9,7 @@ import com.doublebasshero.engine.Levels
 import com.doublebasshero.engine.NotificationDay
 import com.doublebasshero.engine.NotificationPrefs
 import com.doublebasshero.engine.NotificationType
+import com.doublebasshero.engine.Ramp
 import com.doublebasshero.engine.Profile
 import com.doublebasshero.engine.Recommendation
 import com.doublebasshero.engine.RunnerState
@@ -175,7 +176,7 @@ class Repository(private val dao: TrainingDao) {
                 onboarded = true, trueBpm = trueBpm, restDay1 = a, restDay2 = b,
                 programStart = today.epoch(), cycleStart = today.weekStart().epoch(),
                 lastProcessedWeek = today.weekStart().minusWeeks(1).epoch(), pendingReviewWeek = -1,
-                benchmarkUnlocked = false, reminderMinutes = reminderMinutes.joinToString(","),
+                benchmarkUnlocked = false, reminderMinutes = reminderMinutes.joinToString(","), startRule = 2,
             )
         }
     }
@@ -187,7 +188,7 @@ class Repository(private val dao: TrainingDao) {
         updateProfile {
             it.copy(
                 trueBpm = trueBpm, cycleStart = today.weekStart().epoch(), benchmarkUnlocked = false,
-                pendingReviewWeek = -1, lastProcessedWeek = today.weekStart().minusWeeks(1).epoch(),
+                pendingReviewWeek = -1, lastProcessedWeek = today.weekStart().minusWeeks(1).epoch(), startRule = 2,
             )
         }
     }
@@ -257,6 +258,15 @@ class Repository(private val dao: TrainingDao) {
     suspend fun rollover(today: LocalDate = LocalDate.now()) {
         var p = dao.profileNow() ?: return
         if (!p.onboarded) return
+        if (p.startRule < 2) {
+            // Start BPMs used to sit 2 × (sets − 1) below the True BPM; they now start at it.
+            // Shift saved values by the same amount, keeping any week-review adjustments.
+            val level = Levels.forTrueBpm(p.trueBpm)
+            val offset = Ramp.DEFAULT_STEP * (level.setsPerExercise - 1)
+            dao.saveStartBpms(dao.startBpmsNow().map { it.copy(bpm = (it.bpm + offset).coerceAtMost(level.cap)) })
+            p = p.copy(startRule = 2)
+            dao.saveProfile(p)
+        }
         if (p.noPedals && p.noPedalsUntil >= 0 && today.epoch() >= p.noPedalsUntil) {
             // Back with pedals: the mode switched itself off.
             p = p.copy(noPedals = false, noPedalsUntil = -1)

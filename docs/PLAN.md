@@ -36,6 +36,8 @@ All six phases are implemented (v0.1.0). Verified on an Android 15 emulator: onb
 
 v0.2.0 adds no-pedals mode (engine rules + tests, database migration 1 → 2, Settings toggle with return date). Verified on the emulator, including the upgrade over v0.1.0 data.
 
+Since then: first sets start at the True BPM (database migration 3 → 4 shifts start BPMs saved under the old rule once, keeping week-review adjustments); exercises with fewer sets than normal start higher.
+
 Not verified yet: audio and voice by ear, headset buttons, reminders firing at their real time, the week rollover on an actual Monday.
 
 ### Debug helper

@@ -47,6 +47,12 @@ data class ProfileEntity(
     @ColumnInfo(defaultValue = "-1") val noPedalsUntil: Long = -1,
     /** RIGHT, LEFT or NONE: the weaker foot gets an extra Solo Leg pass in the warm-up. */
     @ColumnInfo(defaultValue = "NONE") val weakFoot: String = "NONE",
+    /**
+     * How saved start BPMs were computed: 1 = below the True BPM so the ramp ended
+     * on it (before v0.3), 2 = starting at the True BPM. Rows from rule 1 are
+     * shifted once on startup.
+     */
+    @ColumnInfo(defaultValue = "1") val startRule: Int = 2,
 )
 
 @Entity(tableName = "start_bpm", primaryKeys = ["exercise", "dayType"])
@@ -159,7 +165,7 @@ interface TrainingDao {
 
 @Database(
     entities = [ProfileEntity::class, StartBpmEntity::class, SessionEntity::class, WeekOverrideEntity::class, LevelEventEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class DbhDatabase : RoomDatabase() {
@@ -181,7 +187,16 @@ abstract class DbhDatabase : RoomDatabase() {
             }
         }
 
+        /** v4: start BPM rule version (existing rows were computed with rule 1). */
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE profile ADD COLUMN startRule INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
         fun create(context: Context): DbhDatabase =
-            Room.databaseBuilder(context, DbhDatabase::class.java, "dbh.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+            Room.databaseBuilder(context, DbhDatabase::class.java, "dbh.db")
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .build()
     }
 }

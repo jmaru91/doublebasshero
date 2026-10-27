@@ -3,7 +3,17 @@ package com.doublebasshero.engine
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class PlannedExercise(val exercise: Exercise, val sets: Int, val startBpm: Int, val weak: Boolean = false)
+data class PlannedExercise(
+    val exercise: Exercise,
+    val sets: Int,
+    val startBpm: Int,
+    val weak: Boolean = false,
+    /**
+     * Fewer sets than normal (weakness balancing took some away): the start moves up
+     * so the last set still lands where the normal ramp would arrive.
+     */
+    val raisedStart: Boolean = false,
+)
 
 @Serializable
 data class SessionPlan(
@@ -70,11 +80,16 @@ object SessionBuilder {
             soloLeg = soloLeg,
             exercises = base.keys.map { ex ->
                 val n = sets.getValue(ex)
+                val start = StartBpms.get(startBpms, level, trueBpm, ex, dayType)
+                // A strong exercise that gave sets away must still be challenging: start higher so the
+                // last set lands where the normal ramp would arrive, and the result is recorded at that speed.
+                val missing = if (deload) 0 else (base.getValue(ex) - n).coerceAtLeast(0)
                 PlannedExercise(
                     exercise = ex,
                     sets = if (deload) (n + 1) / 2 else n,
-                    startBpm = StartBpms.get(startBpms, level, trueBpm, ex, dayType),
+                    startBpm = (start + Ramp.DEFAULT_STEP * missing).coerceAtMost(level.cap),
                     weak = ex == weak,
+                    raisedStart = missing > 0,
                 )
             },
         )

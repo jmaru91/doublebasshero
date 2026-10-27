@@ -337,6 +337,7 @@ session(date):
 - The session's total set count stays constant (Lvl 1 = 12 sets).
 - The weakest exercise can reach 2–3× the base sets; sets are taken from the strongest, never below 1.
 - **Pedal Normal** never drops below its base sets.
+- An exercise left with **fewer sets than normal** starts higher (start + 2 × the missing sets, capped), so its last set still lands where the normal ramp would arrive. A strong exercise is still trained, and recorded, at a challenging speed: 1 set → played at the top, 2 sets → start +2. Not in deload weeks.
 - The user can turn balancing off, or mark an exercise as weak by hand.
 
 ---

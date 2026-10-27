@@ -98,6 +98,17 @@ class SessionTest {
         assertEquals(3, sets[Exercise.PEDAL_NORMAL])
         assertEquals(12, sets.values.sum())
         assertTrue(p.exercises.first { it.exercise == Exercise.FLOOR_HEEL_DOWN }.weak)
+        val hip = p.exercises.first { it.exercise == Exercise.FLOOR_HIP }
+        assertEquals(1, hip.sets)
+        assertTrue(hip.raisedStart)
+        assertEquals(116, hip.startBpm, "one set, played where the normal 3-set ramp arrives: 112 + 2 × 2")
+        val heelUp = p.exercises.first { it.exercise == Exercise.FLOOR_HEEL_UP }
+        assertEquals(114, heelUp.startBpm, "2 sets start at +2, so the last lands on 116 too")
+        assertEquals(116, SessionBuilder.projectedTop(p, heelUp))
+        val heelDown = p.exercises.first { it.exercise == Exercise.FLOOR_HEEL_DOWN }
+        assertEquals(112, heelDown.startBpm, "the weak exercise keeps its start")
+        val deload = SessionBuilder.build(l4, DayType.ENDURANCE, DayType.ENDURANCE, 112, emptyMap(), r, prioritizeWeak = true, deload = true)
+        assertTrue(deload.exercises.none { it.raisedStart }, "deload stays easy")
     }
 
     @Test fun `no balancing without enough data`() {

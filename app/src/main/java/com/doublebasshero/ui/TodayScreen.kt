@@ -343,6 +343,8 @@ private fun DayCard(vm: AppViewModel, d: AppData, sel: LocalDate) {
                             val top = SessionBuilder.projectedTop(plan, e)
                             Text(
                                 "${e.sets} × ${plan.setDurationSec / 60} min · " + when {
+                                    e.raisedStart && e.sets == 1 -> "one set, at the top of the ramp"
+                                    e.raisedStart -> "starts higher, up to $top"
                                     plan.deload -> "no ramp"
                                     top > e.startBpm -> "+2 per set, up to $top"
                                     else -> "at the cap"

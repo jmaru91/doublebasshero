@@ -149,6 +149,19 @@ class TrainingCalendar(
             .groupBy({ it.exercise }, { r -> r.sets.mapNotNull { it.rating } })
             .mapValues { (_, v) -> v.flatten() }
 
+    /**
+     * Sets per exercise that weakness balancing gives a normal session of [type] right now
+     * (pedals, no deload), and the weak spot if any. Null when [type] has turned into Endurance.
+     */
+    fun balancedSets(type: DayType, startBpms: Map<StartKey, Int>): Pair<Map<Exercise, Int>, Exercise?>? {
+        if (CapRules.converts(level, type, history)) return null
+        val plan = SessionBuilder.build(
+            level, type, type, profile.trueBpm, startBpms, recentRatings(), prioritizeWeak = true, deload = false,
+            atCap = CapRules.atCap(level, type, history),
+        )
+        return plan.exercises.associate { it.exercise to it.sets } to plan.exercises.firstOrNull { it.weak }?.exercise
+    }
+
     fun buildSession(date: LocalDate, startBpms: Map<StartKey, Int>): SessionPlan? {
         val info = day(date)
         // Solo Leg 1 and 2 alternate from one training session to the next.

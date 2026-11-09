@@ -206,16 +206,23 @@ fun ProgressScreen(vm: AppViewModel) {
         Card {
             Label("Form per exercise · last 2 weeks")
             val recent = d.calendar.recentRatings()
-            val (plan, weak) = com.doublebasshero.engine.WeaknessBalancer.balance(level, recent)
+            // Balancing is per day type: an exercise at the cap on a day type gets no extra sets there.
+            val balanced = if (d.profile.prioritizeWeak) DayType.PROGRESSING.mapNotNull { t -> d.calendar.balancedSets(t, d.startBpms)?.let { t to it } } else emptyList()
             level.exercises.forEach { ex ->
                 val r = recent[ex].orEmpty()
                 val clean = if (r.isEmpty()) null else r.count { it == FormRating.CLEAN }.toFloat() / r.size
                 Row {
                     Text(ex.title, color = C.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text(clean?.let { "${(it * 100).toInt()}% clean sets" } ?: "no data yet", color = C.muted, fontSize = 12.sp)
+                }
+                val changed = balanced.filter { (_, b) -> b.second != null && b.first[ex] != level.setsPerExercise }
+                if (changed.isNotEmpty()) {
+                    val weak = changed.any { (_, b) -> b.second == ex }
                     Text(
-                        (clean?.let { "${(it * 100).toInt()}% clean sets" } ?: "no data yet") +
-                            (if (d.profile.prioritizeWeak && weak != null && plan[ex] != level.setsPerExercise) " · ${level.setsPerExercise}→${plan[ex]} sets" else ""),
-                        color = C.muted, fontSize = 12.sp,
+                        (if (weak) "Weak spot · " else "") +
+                            changed.groupBy({ (_, b) -> b.first.getValue(ex) }, { (t, _) -> t.title })
+                                .entries.joinToString(" · ") { (n, types) -> "${level.setsPerExercise}→$n sets on ${types.joinToString(", ")}" },
+                        color = if (weak) C.bad else C.muted, fontSize = 12.sp,
                     )
                 }
                 ProgressBar(clean ?: 0f, when { clean == null -> C.line; clean >= 0.75f -> C.hybrid; clean >= 0.6f -> C.endurance; else -> C.bad })

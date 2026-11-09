@@ -162,6 +162,7 @@ class TrainingCalendar(
                 noPedals = info.noPedals,
                 weakFoot = profile.weakFoot,
                 soloLeg = soloLeg,
+                atCap = CapRules.atCap(level, info.type, history),
             )
             else -> null
         }

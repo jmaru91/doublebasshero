@@ -180,8 +180,16 @@ object WeaknessBalancer {
     fun balance(level: Level, ratings: Map<Exercise, List<FormRating>>): Pair<Map<Exercise, Int>, Exercise?> =
         balance(level.exercises.associateWith { level.setsPerExercise }, ratings)
 
-    /** Same rule on any base plan (e.g. the no-pedals one): the weakest gets up to 2× its base sets. */
-    fun balance(base: Map<Exercise, Int>, ratings: Map<Exercise, List<FormRating>>): Pair<Map<Exercise, Int>, Exercise?> {
+    /**
+     * Same rule on any base plan (e.g. the no-pedals one): the weakest gets up to 2× its base sets.
+     * Exercises in [capped] are already at the cap on this day type: more sets can't make them
+     * faster, so they never become the weak spot (the next weakest can).
+     */
+    fun balance(
+        base: Map<Exercise, Int>,
+        ratings: Map<Exercise, List<FormRating>>,
+        capped: Set<Exercise> = emptySet(),
+    ): Pair<Map<Exercise, Int>, Exercise?> {
         val plan = LinkedHashMap(base)
         val candidates = base.keys.filter { it != Exercise.PEDAL_NORMAL }
         if (candidates.size < 2) return plan to null
@@ -190,10 +198,11 @@ object WeaknessBalancer {
         }
         if (scores.values.any { it == null }) return plan to null
         val sorted = candidates.sortedBy { scores.getValue(it) }
-        val weak = sorted.first()
+        val weak = sorted.firstOrNull { it !in capped } ?: return plan to null
         if (scores.getValue(sorted.last())!! - scores.getValue(weak)!! < MIN_GAP) return plan to null
+        // Only stronger exercises give sets away.
         var need = base.getValue(weak)
-        for (ex in sorted.drop(1).reversed()) {
+        for (ex in sorted.drop(sorted.indexOf(weak) + 1).reversed()) {
             if (need == 0) break
             val give = minOf(plan.getValue(ex) - 1, need)
             plan[ex] = plan.getValue(ex) - give

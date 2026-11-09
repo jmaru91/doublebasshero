@@ -111,6 +111,26 @@ class SessionTest {
         assertTrue(deload.exercises.none { it.raisedStart }, "deload stays easy")
     }
 
+    @Test fun `an exercise at the cap on this day type is never the weak spot`() {
+        val r = mapOf(
+            Exercise.FLOOR_HIP to List(8) { FormRating.CLEAN },
+            Exercise.FLOOR_HEEL_UP to List(8) { if (it < 6) FormRating.CLEAN else FormRating.SHAKY },
+            Exercise.FLOOR_HEEL_DOWN to List(8) { if (it < 2) FormRating.CLEAN else FormRating.BROKEN },
+        )
+        val capped = SessionBuilder.build(l4, DayType.SPEED, DayType.SPEED, 112, emptyMap(), r, prioritizeWeak = true, deload = false, atCap = setOf(Exercise.FLOOR_HEEL_DOWN))
+        assertTrue(capped.exercises.all { it.sets == 3 && !it.weak }, "Heel-Down is capped on Speed and Heel-Up is too close to Hip")
+        val startsAtCap = SessionBuilder.build(l4, DayType.SPEED, DayType.SPEED, 112, mapOf(StartKey(Exercise.FLOOR_HEEL_DOWN, DayType.SPEED) to l4.cap), r, prioritizeWeak = true, deload = false)
+        assertTrue(startsAtCap.exercises.none { it.weak }, "a start BPM already at the cap counts as capped")
+
+        val nextWeakest = r + (Exercise.FLOOR_HEEL_UP to List(8) { if (it < 3) FormRating.CLEAN else FormRating.SHAKY })
+        val p = SessionBuilder.build(l4, DayType.SPEED, DayType.SPEED, 112, emptyMap(), nextWeakest, prioritizeWeak = true, deload = false, atCap = setOf(Exercise.FLOOR_HEEL_DOWN))
+        val sets = p.exercises.associate { it.exercise to it.sets }
+        assertTrue(p.exercises.first { it.exercise == Exercise.FLOOR_HEEL_UP }.weak, "the next weakest takes its place")
+        assertEquals(mapOf(Exercise.FLOOR_HIP to 1, Exercise.FLOOR_HEEL_UP to 5, Exercise.FLOOR_HEEL_DOWN to 3, Exercise.PEDAL_NORMAL to 3), sets, "only stronger exercises give sets away")
+        val endurance = SessionBuilder.build(l4, DayType.ENDURANCE, DayType.ENDURANCE, 112, emptyMap(), r, prioritizeWeak = true, deload = false)
+        assertTrue(endurance.exercises.first { it.exercise == Exercise.FLOOR_HEEL_DOWN }.weak, "not capped on Endurance: still the weak spot there")
+    }
+
     @Test fun `no balancing without enough data`() {
         val p = plan(ratings = mapOf(Exercise.FLOOR_HIP to List(2) { FormRating.BROKEN }))
         assertTrue(p.exercises.all { it.sets == 3 && !it.weak })

@@ -63,10 +63,13 @@ object SessionBuilder {
         noPedals: Boolean = false,
         weakFoot: Foot? = null,
         soloLeg: Int = 1,
+        atCap: Set<Exercise> = emptySet(),
     ): SessionPlan {
         require(dayType in DayType.PROGRESSING)
         val base = if (noPedals) NoPedals.baseSets(level) else level.exercises.associateWith { level.setsPerExercise }
-        val (sets, weak) = if (prioritizeWeak) WeaknessBalancer.balance(base, recentRatings) else base to null
+        // At the cap on this day type (by its latest result, or already starting there): no extra sets.
+        val capped = atCap + base.keys.filter { StartBpms.get(startBpms, level, trueBpm, it, dayType) >= level.cap }
+        val (sets, weak) = if (prioritizeWeak) WeaknessBalancer.balance(base, recentRatings, capped) else base to null
         return SessionPlan(
             level = level.number,
             dayType = dayType,

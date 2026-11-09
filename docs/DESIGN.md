@@ -220,6 +220,8 @@ Example: the level tops out at 150 and the user can already burst at 150 on ever
 
 Weaker exercises get **2–3× more sets**. The extra sets are taken from the strongest exercises, so the session length stays the same.
 
+The weak spot is judged on all day types together, but an exercise already **at the cap on today's day type** never gets extra sets that day: more sets can't make it faster. The next weakest exercise takes its place, if it's still clearly behind the strongest.
+
 ### 3.11 Benchmark (suggested by the app)
 
 - **Unlock:** the benchmark is **locked** until **every exercise** of the level has reached the cap on Endurance days, rated Clean, in the week's Endurance sessions. Endurance is the hardest day type, so Speed and Hybrid normally get there first (and have already turned into Endurance days).
@@ -337,6 +339,7 @@ session(date):
 - The session's total set count stays constant (Lvl 1 = 12 sets).
 - The weakest exercise can reach 2–3× the base sets; sets are taken from the strongest, never below 1.
 - **Pedal Normal** never drops below its base sets.
+- An exercise **at the cap on the session's day type** (its latest result there reached the cap, or its start BPM is already the cap) is skipped as the weak spot; the next weakest can take its place. Only exercises with a better form score give sets away.
 - An exercise left with **fewer sets than normal** starts higher (start + 2 × the missing sets, capped), so its last set still lands where the normal ramp would arrive. A strong exercise is still trained, and recorded, at a challenging speed: 1 set → played at the top, 2 sets → start +2. Not in deload weeks.
 - The user can turn balancing off, or mark an exercise as weak by hand.
 

@@ -262,7 +262,7 @@ class Repository(private val dao: TrainingDao) {
             // Start BPMs used to sit 2 × (sets − 1) below the True BPM; they now start at it.
             // Shift saved values by the same amount, keeping any week-review adjustments.
             val level = Levels.forTrueBpm(p.trueBpm)
-            val offset = Ramp.DEFAULT_STEP * (level.setsPerExercise - 1)
+            val offset = 2 * (level.setsPerExercise - 1) // the old rule's +2 per set
             dao.saveStartBpms(dao.startBpmsNow().map { it.copy(bpm = (it.bpm + offset).coerceAtMost(level.cap)) })
             p = p.copy(startRule = 2)
             dao.saveProfile(p)

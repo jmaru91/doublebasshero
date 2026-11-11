@@ -169,12 +169,21 @@ At placement (and after every level-up or retest) every exercise and day type **
 
 - Set 1 is played at the **start BPM** for that exercise and day type.
 - After **each set** the user rates its form (Clean / Shaky / Broken) on the rest screen.
-- The rating alone sets the next set's BPM; the user doesn't choose the step:
-  - Shaky or Broken → **+0**;
-  - Clean → **+2**;
-  - Clean **and** the previous set of the same exercise was Clean too → **+4** (you're strong enough to push).
-  - An unrated set counts as Clean for +2, never for +4.
+- The rating alone sets the next set's BPM; the user doesn't choose the step. The steps depend on the day type:
+
+  | Set rating | Endurance | Hybrid | Speed |
+  |---|---|---|---|
+  | Clean **and** the previous set of the same exercise was Clean too (you're strong enough to push) | **+4** | **+6** | **+8** |
+  | Clean | **+2** | **+3** | **+4** |
+  | Shaky | **+0** | **+0** | **+0** |
+  | Broken | **+0** | **−3** | **−4** |
+
+  - An unrated set counts as Clean for the single step, never for the double one.
 - No set ever goes above the **cap**.
+
+Speed and Hybrid climb faster because fatigue doesn't build up there: on Speed days you play 1 bar and rest 3, with long rests between sets, so the limit is pure speed, not stamina. Hybrid sits in between. Endurance keeps small steps because fatigue is the point. With big steps it is easier to overshoot, so on Speed and Hybrid days a Broken set steps back one step instead of holding the BPM.
+
+A side effect: Speed (and Hybrid) reach the level's cap sooner, so they turn into Endurance days sooner (§3.9). This is intended: once you can burst at the cap, Speed has nothing more to give at this level, and the week moves to Endurance, which is what unlocks the benchmark.
 
 The ramp regulates itself on high levels. At levels 8–10 there are 8–10 sets of the same exercise, so a fixed step would push the last sets far above the start (+2 per set = +14 to +18 BPM). Here the climb stops as soon as a set is rated Shaky or Broken, and the level's cap stops it in any case.
 
@@ -198,12 +207,14 @@ The ramp makes the last sets the hardest; averaging over all sets keeps one Brok
 
 At the end of the week, for each exercise and day type, the app looks at all of that week's sessions (1 for Speed, 1 for Hybrid, 3 for Endurance) and applies this rule (confirmed):
 
-| This week | Recommendation |
-|---|---|
-| Any session rated ❌ Broken | −2 |
-| Any ⚠️ Shaky session, or any Shaky/Broken set before the last one | +0 |
-| All ✅ Clean | +2 |
-| All ✅ Clean **and** the ramp gave a +4 in most sessions | +4 |
+| This week | Endurance | Hybrid | Speed |
+|---|---|---|---|
+| Any session rated ❌ Broken | −2 | −3 | −4 |
+| Any ⚠️ Shaky session, or any Shaky/Broken set before the last one | +0 | +0 | +0 |
+| All ✅ Clean | +2 | +3 | +4 |
+| All ✅ Clean **and** the ramp gave its double step (+4 / +6 / +8) in most sessions | +4 | +6 | +8 |
+
+The weekly steps are the same as the day type's ramp steps (§3.7).
 
 The result is capped at the level's maximum BPM. The user sees the recommendations in a **week review** and can accept them or adjust any of them: form decides, and the user is the judge of form.
 
@@ -310,7 +321,7 @@ The core of the app is a pure module with no Android dependencies. Given the use
 User state ──►  WeekPlanner      ──► the week (from the user's rest days)
                 SessionBuilder   ──► exercises, sets, start BPMs, pattern
                 WeaknessBalancer ──► redistributes sets
-                RampController   ──► next-set BPM from the ratings (+0 / +2 / +4 after two clean sets, capped)
+                RampController   ──► next-set BPM from the ratings and the day type's steps (§3.7), capped
                 BpmProgression   ──► week review: recommended start BPMs from the week's sessions
                 CapEvaluator     ──► converts maxed Speed/Hybrid days to Endurance
                 LevelEvaluator   ──► benchmark passed? level up?
@@ -329,7 +340,7 @@ session(date):
       for each set:
           play(bpm, dayType.pattern, level.setDuration)
           rest(dayType == Speed or lastSetOfExercise ? LONG : SHORT)
-          bpm = min(cap, bpm + step(rating, previousRating))   # +0 / +2 / +4
+          bpm = min(cap, bpm + step(dayType, rating, previousRating))   # E +0/+2/+4 · H −3/+0/+3/+6 · S −4/+0/+4/+8
       rateForm(exercise)
 ```
 
@@ -340,7 +351,7 @@ session(date):
 - The weakest exercise can reach 2–3× the base sets; sets are taken from the strongest, never below 1.
 - **Pedal Normal** never drops below its base sets.
 - An exercise **at the cap on the session's day type** (its latest result there reached the cap, or its start BPM is already the cap) is skipped as the weak spot; the next weakest can take its place. Only exercises with a better form score give sets away.
-- An exercise left with **fewer sets than normal** starts higher (start + 2 × the missing sets, capped), so its last set still lands where the normal ramp would arrive. A strong exercise is still trained, and recorded, at a challenging speed: 1 set → played at the top, 2 sets → start +2. Not in deload weeks.
+- An exercise left with **fewer sets than normal** starts higher (start + the day type's Clean step × the missing sets: 2 on Endurance, 3 on Hybrid, 4 on Speed; capped), so its last set still lands where the normal ramp would arrive. A strong exercise is still trained, and recorded, at a challenging speed: 1 set → played at the top, 2 sets → start + one step. Not in deload weeks.
 - The user can turn balancing off, or mark an exercise as weak by hand.
 
 ---
@@ -475,7 +486,7 @@ Tapping any day of the week previews its session. Only today's session can be st
 Shown on the first day of the new week, before the Speed session.
 
 - For each day type and exercise: last week's start BPM → recommended start BPM, with the reason (e.g. "3/3 clean", "shaky on Fri").
-- **Accept all** in one tap, or adjust any single value (−2 / 0 / +2 / +4).
+- **Accept all** in one tap, or adjust any single value with that day type's steps (Endurance −2 / 0 / +2 / +4, Hybrid −3 / 0 / +3 / +6, Speed −4 / 0 / +4 / +8).
 - Skipped sessions don't count; a day type with no completed session stays the same.
 
 ### 6.4c Edit this week
@@ -593,4 +604,4 @@ No backend: the app works fully offline.
 
 None right now.
 
-Settled: 3 Endurance days; app-recommended week (no templates); app-recommended weekly progression (§3.8); one cap per level; day conversion only when **all** exercises hit the cap (Speed and Hybrid); ramp per set set by the ratings (+0 / +2 / +4 after two clean sets); rests as hints, always long on Speed days; warm-up includes Solo Leg; Endurance days use the normal ramp; form rated after every set and averaged per exercise; benchmark locked until every exercise hits the cap on Endurance days, suggested on the next fresh day; 3+1 cycle managed by the app, deload = half the sets with no ramp (full rest optional); a week with fewer than 3 sessions counts as an unplanned deload; skipped days count as rest and the app suggests make-up days; busy-week priority S H E E E → S H E E → S H E → H E → E; notifications per §6.8 (per-weekday reminder times, missed-session at 21:00, end-of-rest cue on); full session usable with the screen off (§6.9); interrupted sessions resume within the day, with a re-warm-up after 15 min (§6.3b).
+Settled: 3 Endurance days; app-recommended week (no templates); app-recommended weekly progression (§3.8); one cap per level; day conversion only when **all** exercises hit the cap (Speed and Hybrid); ramp per set set by the ratings, steeper on Speed and Hybrid (§3.7: Endurance +0/+2/+4, Hybrid −3/+0/+3/+6, Speed −4/+0/+4/+8; the weekly progression uses the same steps); rests as hints, always long on Speed days; warm-up includes Solo Leg; Endurance days use the normal ramp; form rated after every set and averaged per exercise; benchmark locked until every exercise hits the cap on Endurance days, suggested on the next fresh day; 3+1 cycle managed by the app, deload = half the sets with no ramp (full rest optional); a week with fewer than 3 sessions counts as an unplanned deload; skipped days count as rest and the app suggests make-up days; busy-week priority S H E E E → S H E E → S H E → H E → E; notifications per §6.8 (per-weekday reminder times, missed-session at 21:00, end-of-rest cue on); full session usable with the screen off (§6.9); interrupted sessions resume within the day, with a re-warm-up after 15 min (§6.3b).

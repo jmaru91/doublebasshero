@@ -157,7 +157,7 @@ class SessionTest {
     }
 
     @Test fun `two clean sets in a row earn +4`() {
-        var s = SessionRunner.start(plan(DayType.HYBRID))
+        var s = SessionRunner.start(plan())
         repeat(5) { s = SessionRunner.advance(s) } // warm-up, set 1
         s = SessionRunner.rate(s, FormRating.CLEAN)
         assertEquals(114, SessionRunner.nextBpm(s), "first clean set: +2")
@@ -166,6 +166,42 @@ class SessionTest {
         assertEquals(118, SessionRunner.nextBpm(s), "second clean in a row: +4")
         s = SessionRunner.rate(s, FormRating.SHAKY)
         assertEquals(114, SessionRunner.nextBpm(s), "changing the rating changes the step")
+        s = SessionRunner.rate(s, FormRating.BROKEN)
+        assertEquals(114, SessionRunner.nextBpm(s), "broken holds the BPM on Endurance")
+    }
+
+    @Test fun `speed and hybrid climb faster and step back after a broken set`() {
+        for ((type, steps) in listOf(DayType.SPEED to listOf(4, 8, -4), DayType.HYBRID to listOf(3, 6, -3))) {
+            val (clean, strong, broken) = steps
+            var s = SessionRunner.start(plan(type))
+            repeat(5) { s = SessionRunner.advance(s) } // warm-up, set 1
+            assertEquals(112 + clean, SessionRunner.nextBpm(s), "$type: an unrated set counts as clean")
+            s = SessionRunner.rate(s, FormRating.CLEAN)
+            repeat(2) { s = SessionRunner.advance(s) } // set 2
+            s = SessionRunner.rate(s, FormRating.CLEAN)
+            assertEquals((112 + clean + strong).coerceAtMost(l4.cap), SessionRunner.nextBpm(s), "$type: two clean sets in a row")
+            s = SessionRunner.rate(s, FormRating.SHAKY)
+            assertEquals(112 + clean, SessionRunner.nextBpm(s), "$type: shaky holds the BPM")
+            s = SessionRunner.rate(s, FormRating.BROKEN)
+            assertEquals(112 + clean + broken, SessionRunner.nextBpm(s), "$type: broken steps back")
+        }
+        val p = plan(DayType.SPEED)
+        assertEquals(119, SessionBuilder.projectedTop(p, p.exercises.first()), "112 + 4 × 2, capped")
+    }
+
+    @Test fun `fewer sets start higher by the day type's step`() {
+        val r = mapOf(
+            Exercise.FLOOR_HIP to List(8) { FormRating.CLEAN },
+            Exercise.FLOOR_HEEL_UP to List(8) { if (it < 6) FormRating.CLEAN else FormRating.SHAKY },
+            Exercise.FLOOR_HEEL_DOWN to List(8) { if (it < 2) FormRating.CLEAN else FormRating.BROKEN },
+            Exercise.PEDAL_NORMAL to List(8) { FormRating.SHAKY },
+        )
+        val hybrid = plan(DayType.HYBRID, ratings = r).exercises.associateBy { it.exercise }
+        assertEquals(118, hybrid.getValue(Exercise.FLOOR_HIP).startBpm, "1 set on Hybrid: 112 + 3 × 2")
+        assertEquals(115, hybrid.getValue(Exercise.FLOOR_HEEL_UP).startBpm, "2 sets on Hybrid: 112 + 3")
+        val speed = plan(DayType.SPEED, ratings = r).exercises.associateBy { it.exercise }
+        assertEquals(119, speed.getValue(Exercise.FLOOR_HIP).startBpm, "1 set on Speed: 112 + 4 × 2, capped")
+        assertEquals(116, speed.getValue(Exercise.FLOOR_HEEL_UP).startBpm, "2 sets on Speed: 112 + 4")
     }
 
     @Test fun `ramp never goes above the cap`() {

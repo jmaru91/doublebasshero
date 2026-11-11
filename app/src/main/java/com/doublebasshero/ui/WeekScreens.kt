@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.doublebasshero.engine.DayState
+import com.doublebasshero.engine.Ramp
 import com.doublebasshero.engine.ReviewReason
 import com.doublebasshero.engine.StartKey
 import com.doublebasshero.engine.weekStart
@@ -63,6 +64,8 @@ fun ReviewScreen(vm: AppViewModel) {
         Body("Start BPMs for this week, recommended from last week's sessions. Accept them all or adjust any of them: you are the judge of your form.")
         recs.groupBy { it.dayType }.forEach { (type, rows) ->
             val color = type.color()
+            val steps = Ramp.of(type)
+            val choices = listOf(-steps.clean, 0, steps.clean, steps.strong)
             val sessions = d.calendar.sessionsIn(week).count { it.dayType == type }
             Card(border = color) {
                 Row(verticalAlignment = Alignment.Bottom) {
@@ -78,7 +81,7 @@ fun ReviewScreen(vm: AppViewModel) {
                         is ReviewReason.Shaky -> "Shaky on ${WD_FULL[rs.date.dayOfWeek.value - 1].take(3)}" to C.endurance
                         is ReviewReason.HeldBack -> "+0 chosen on ${WD_FULL[rs.date.dayOfWeek.value - 1].take(3)}" to C.endurance
                         is ReviewReason.AllClean -> "All clean (${rs.sessions}/${rs.sessions})" to C.hybrid
-                        is ReviewReason.AllCleanStrong -> "All clean, +4 in ${rs.plusFours}/${rs.sessions}" to C.hybrid
+                        is ReviewReason.AllCleanStrong -> "All clean, +${Ramp.of(type).strong} in ${rs.strongSteps}/${rs.sessions}" to C.hybrid
                     }
                     Box(Modifier.fillMaxWidth().height(1.dp).background(C.line))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -89,8 +92,8 @@ fun ReviewScreen(vm: AppViewModel) {
                         Text("${rec.from} → ", style = hud(20.sp))
                         Text("${rec.to(d.level.cap, chosen)}", style = hud(20.sp, color = color))
                     }
-                    ChoiceRow(listOf(-2, 0, 2, 4).map { Triple(if (it > 0) "+$it" else "$it", color, it == chosen) }, { i ->
-                        vm.reviewPicks.value = picks + (key to listOf(-2, 0, 2, 4)[i])
+                    ChoiceRow(choices.map { Triple(if (it > 0) "+$it" else if (it < 0) "−${-it}" else "0", color, it == chosen) }, { i ->
+                        vm.reviewPicks.value = picks + (key to choices[i])
                     }, height = 36.dp)
                 }
             }

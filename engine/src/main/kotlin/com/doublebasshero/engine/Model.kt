@@ -219,11 +219,28 @@ object Benchmark {
     const val DURATION_SEC = 240
 }
 
-/** BPM steps between sets of the same exercise, set by the ratings. */
-object Ramp {
-    /** After a Clean (or unrated) set. */
-    const val DEFAULT_STEP = 2
-
+/**
+ * BPM steps of one day type, set by the ratings. The ramp between sets and the
+ * weekly progression use the same steps.
+ */
+data class RampSteps(
+    /** After a Clean (or unrated) set; also the weekly step for an all-Clean week. */
+    val clean: Int,
     /** After two Clean sets in a row: strong enough to push. */
-    const val STRONG_STEP = 4
+    val strong: Int,
+    /** After a Broken set (≤ 0): back one step on Speed and Hybrid. */
+    val broken: Int,
+)
+
+/** Steeper on Speed and Hybrid: fatigue doesn't build up there, so the limit is pure speed. */
+object Ramp {
+    val ENDURANCE = RampSteps(clean = 2, strong = 4, broken = 0)
+    val HYBRID = RampSteps(clean = 3, strong = 6, broken = -3)
+    val SPEED = RampSteps(clean = 4, strong = 8, broken = -4)
+
+    fun of(type: DayType): RampSteps = when (type) {
+        DayType.SPEED -> SPEED
+        DayType.HYBRID -> HYBRID
+        else -> ENDURANCE
+    }
 }

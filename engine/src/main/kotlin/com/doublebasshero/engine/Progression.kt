@@ -46,10 +46,6 @@ object Ratings {
 data class StartKey(val exercise: Exercise, val dayType: DayType)
 
 object StartBpms {
-    /**
-     * Placement defaults: every day type starts so that the default ramp
-     * (+2 per set) ends on the True BPM, never above the cap.
-     */
     /** Placement default: the first set starts at the True BPM; the ramp climbs from there, up to the cap. */
     fun default(level: Level, trueBpm: Int): Int = trueBpm.coerceIn(30, level.cap)
 
@@ -71,7 +67,7 @@ sealed interface ReviewReason {
     data class Shaky(val date: LocalDate) : ReviewReason
     data class HeldBack(val date: LocalDate) : ReviewReason
     data class AllClean(val sessions: Int) : ReviewReason
-    data class AllCleanStrong(val plusFours: Int, val sessions: Int) : ReviewReason
+    data class AllCleanStrong(val strongSteps: Int, val sessions: Int) : ReviewReason
 }
 
 data class Recommendation(
@@ -87,11 +83,13 @@ data class Recommendation(
 object WeeklyReview {
     /**
      * Recommends next week's start BPMs from one week of sessions:
-     * any Broken → −2; any Shaky, or a Shaky/Broken set before the last → 0;
-     * all Clean with a +4 ramp step in most sessions → +4; all Clean → +2.
+     * any Broken → minus the Clean step; any Shaky, or a Shaky/Broken set before the last → 0;
+     * all Clean with the double ramp step in most sessions → the double step; all Clean → the Clean step.
+     * Steps by day type (§3.7): Endurance −2/0/+2/+4, Hybrid −3/0/+3/+6, Speed −4/0/+4/+8.
      */
     fun recommend(level: Level, trueBpm: Int, startBpms: Map<StartKey, Int>, week: List<SessionResult>): List<Recommendation> =
         DayType.PROGRESSING.flatMap { type ->
+            val steps = Ramp.of(type)
             val sessions = week.filter { it.dayType == type && !it.deload && it.level == level.number }.sortedBy { it.date }
             // The level's exercises plus any floor exercise played in no-pedals mode.
             val exercises = (level.exercises + sessions.flatMap { s -> s.exercises.map { it.exercise } }).distinct().sortedBy { it.ordinal }
@@ -103,13 +101,13 @@ object WeeklyReview {
                 val shaky = results.firstOrNull { it.second.rating == FormRating.SHAKY }
                 // A non-clean set before the last one stopped the ramp: hold the start BPM.
                 val heldBack = results.firstOrNull { (_, r) -> r.sets.dropLast(1).any { it.rating != null && it.rating != FormRating.CLEAN } }
-                val plusFours = results.count { (_, r) -> r.sets.any { it.rampDelta == Ramp.STRONG_STEP } }
+                val strongSteps = results.count { (_, r) -> r.sets.any { it.rampDelta == steps.strong } }
                 when {
-                    broken != null -> Recommendation(ex, type, from, -2, ReviewReason.Broken(broken.first.date))
+                    broken != null -> Recommendation(ex, type, from, -steps.clean, ReviewReason.Broken(broken.first.date))
                     shaky != null -> Recommendation(ex, type, from, 0, ReviewReason.Shaky(shaky.first.date))
                     heldBack != null -> Recommendation(ex, type, from, 0, ReviewReason.HeldBack(heldBack.first.date))
-                    plusFours * 2 > results.size -> Recommendation(ex, type, from, 4, ReviewReason.AllCleanStrong(plusFours, results.size))
-                    else -> Recommendation(ex, type, from, 2, ReviewReason.AllClean(results.size))
+                    strongSteps * 2 > results.size -> Recommendation(ex, type, from, steps.strong, ReviewReason.AllCleanStrong(strongSteps, results.size))
+                    else -> Recommendation(ex, type, from, steps.clean, ReviewReason.AllClean(results.size))
                 }
             }
         }

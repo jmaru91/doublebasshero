@@ -38,6 +38,7 @@ import com.doublebasshero.data.AppData
 import com.doublebasshero.engine.BarKind
 import com.doublebasshero.engine.DayInfo
 import com.doublebasshero.engine.DayState
+import com.doublebasshero.engine.Ramp
 import com.doublebasshero.engine.DayType
 import com.doublebasshero.engine.Patterns
 import com.doublebasshero.engine.ResumeAction
@@ -346,7 +347,7 @@ private fun DayCard(vm: AppViewModel, d: AppData, sel: LocalDate) {
                                     e.raisedStart && e.sets == 1 -> "one set, at the top of the ramp"
                                     e.raisedStart -> "starts higher, up to $top"
                                     plan.deload -> "no ramp"
-                                    top > e.startBpm -> "+2 per set, up to $top"
+                                    top > e.startBpm -> "+${Ramp.of(plan.dayType).clean} per set, up to $top"
                                     else -> "at the cap"
                                 },
                                 color = C.muted, fontSize = 12.sp,

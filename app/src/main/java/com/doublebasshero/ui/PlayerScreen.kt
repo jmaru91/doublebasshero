@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import com.doublebasshero.engine.BarKind
 import com.doublebasshero.engine.DayType
 import com.doublebasshero.engine.FormRating
+import com.doublebasshero.engine.Ramp
 import com.doublebasshero.engine.RestKind
 import com.doublebasshero.engine.SessionRunner
 import com.doublebasshero.engine.Step
@@ -301,6 +302,7 @@ private fun RestView(vm: AppViewModel, s: LiveSession, step: Step.Rest) {
         val cur = r.bpm.getValue(step.nextSetOf!!)
         val next = SessionRunner.nextBpm(r) ?: cur
         val rating = set?.rating
+        val steps = Ramp.of(r.plan.dayType)
         Card {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text("Next set", color = C.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
@@ -310,9 +312,11 @@ private fun RestView(vm: AppViewModel, s: LiveSession, step: Step.Rest) {
                 when {
                     next >= r.plan.cap && next > cur -> "+${next - cur} · level cap reached (${r.plan.cap})."
                     next >= r.plan.cap -> "Level cap reached (${r.plan.cap})."
-                    rating == null -> "Clean → +2 (+4 after two clean sets in a row) · Shaky or Broken → same BPM."
-                    rating == FormRating.CLEAN && next - cur == 4 -> "+4 · two clean sets in a row."
-                    rating == FormRating.CLEAN -> "+2 · clean set."
+                    rating == null -> "Clean → +${steps.clean} (+${steps.strong} after two clean sets in a row) · " +
+                        if (steps.broken < 0) "Shaky → same BPM · Broken → −${-steps.broken}." else "Shaky or Broken → same BPM."
+                    rating == FormRating.CLEAN && next - cur == steps.strong -> "+${steps.strong} · two clean sets in a row."
+                    rating == FormRating.CLEAN -> "+${next - cur} · clean set."
+                    next < cur -> "−${cur - next} · broken set."
                     else -> "Same BPM · ${rating.title.lowercase()} set."
                 },
                 color = C.muted, size = 13.sp,

@@ -26,7 +26,7 @@ class ProgressionTest {
 
     @Test fun `weekly review rule`() {
         val week = listOf(
-            session(0, DayType.SPEED) { clean(108, 110, 112) },
+            session(0, DayType.SPEED) { ex -> if (ex == Exercise.FLOOR_HIP) clean(108, 112, 116, delta = 4) else clean(108, 112, 119, delta = 8) },
             session(1, DayType.HYBRID) { ex ->
                 if (ex == Exercise.FLOOR_HIP) listOf(SetResult(108, BROKEN, 0), SetResult(108, BROKEN, 0), SetResult(108, SHAKY))
                 else clean(108, 110, 112)
@@ -36,8 +36,10 @@ class ProgressionTest {
             session(5, DayType.ENDURANCE) { ex -> if (ex == Exercise.PEDAL_NORMAL) listOf(SetResult(108, CLEAN, 2), SetResult(110, SHAKY, 0), SetResult(110, SHAKY)) else clean(108, 110, 112) },
         )
         val recs = WeeklyReview.recommend(l4, 112, emptyMap(), week).associateBy { it.exercise to it.dayType }
-        assertEquals(2, recs.getValue(Exercise.FLOOR_HIP to DayType.SPEED).delta)
-        assertEquals(-2, recs.getValue(Exercise.FLOOR_HIP to DayType.HYBRID).delta)
+        assertEquals(4, recs.getValue(Exercise.FLOOR_HIP to DayType.SPEED).delta, "all clean on Speed: +4")
+        assertEquals(8, recs.getValue(Exercise.PEDAL_NORMAL to DayType.SPEED).delta, "+8 ramp step in most Speed sessions: +8")
+        assertEquals(-3, recs.getValue(Exercise.FLOOR_HIP to DayType.HYBRID).delta, "broken on Hybrid: −3")
+        assertEquals(3, recs.getValue(Exercise.PEDAL_NORMAL to DayType.HYBRID).delta, "all clean on Hybrid: +3")
         assertIs<ReviewReason.Broken>(recs.getValue(Exercise.FLOOR_HIP to DayType.HYBRID).reason)
         assertEquals(0, recs.getValue(Exercise.FLOOR_HEEL_UP to DayType.ENDURANCE).delta, "a shaky set before the last holds back")
         assertEquals(0, recs.getValue(Exercise.PEDAL_NORMAL to DayType.ENDURANCE).delta, "shaky holds back")

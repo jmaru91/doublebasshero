@@ -90,7 +90,7 @@ object SessionBuilder {
                 PlannedExercise(
                     exercise = ex,
                     sets = if (deload) (n + 1) / 2 else n,
-                    startBpm = (start + Ramp.DEFAULT_STEP * missing).coerceAtMost(level.cap),
+                    startBpm = (start + Ramp.of(dayType).clean * missing).coerceAtMost(level.cap),
                     weak = ex == weak,
                     raisedStart = missing > 0,
                 )
@@ -124,9 +124,9 @@ object SessionBuilder {
     /** Estimated length with the rest hints, in seconds. */
     fun estimatedDurationSec(plan: SessionPlan): Int = SessionRunner.steps(plan).sumOf { SessionRunner.hintSeconds(plan, it) }
 
-    /** Highest BPM the default ramp reaches for an exercise. */
+    /** Highest BPM the default ramp (the day type's Clean step) reaches for an exercise. */
     fun projectedTop(plan: SessionPlan, ex: PlannedExercise): Int =
-        if (plan.deload) ex.startBpm else (ex.startBpm + Ramp.DEFAULT_STEP * (ex.sets - 1)).coerceAtMost(plan.cap)
+        if (plan.deload) ex.startBpm else (ex.startBpm + Ramp.of(plan.dayType).clean * (ex.sets - 1)).coerceAtMost(plan.cap)
 }
 
 @Serializable
@@ -268,17 +268,20 @@ object SessionRunner {
     }
 
     /**
-     * Shaky or Broken → +0; Clean (or not rated) → +2; Clean after a Clean set of
-     * the same exercise → +4. Capped. The user doesn't choose.
+     * Steps by day type (Endurance / Hybrid / Speed): Clean (or not rated) → +2 / +3 / +4;
+     * Clean after a Clean set of the same exercise → +4 / +6 / +8; Shaky → +0;
+     * Broken → +0 / −3 / −4. Capped. The user doesn't choose.
      */
     fun defaultNext(state: RunnerState, ex: Exercise, rating: FormRating?): Int {
+        val steps = Ramp.of(state.plan.dayType)
         val previous = state.sets[ex].orEmpty().dropLast(1).lastOrNull()?.rating
         val step = when {
-            rating == FormRating.CLEAN && previous == FormRating.CLEAN -> Ramp.STRONG_STEP
-            rating == null || rating == FormRating.CLEAN -> Ramp.DEFAULT_STEP
+            rating == FormRating.CLEAN && previous == FormRating.CLEAN -> steps.strong
+            rating == null || rating == FormRating.CLEAN -> steps.clean
+            rating == FormRating.BROKEN -> steps.broken
             else -> 0
         }
-        return (state.bpm.getValue(ex) + step).coerceAtMost(state.plan.cap)
+        return (state.bpm.getValue(ex) + step).coerceIn(30, state.plan.cap)
     }
 
     fun nextBpm(state: RunnerState): Int? {
